@@ -1,17 +1,57 @@
 <!doctype html><meta charset="utf-8"/>
-<style>body{margin:0;display:grid;grid-template-columns:260px 1fr;height:100vh;font-family:system-ui,sans-serif}aside{background:#111;color:#eee;padding:10px}main{padding:10px}iframe{width:100%;height:calc(100vh - 20px);border:0}.btn{display:block;width:100%;margin:6px 0;padding:8px;background:#222;color:#eee;border:1px solid #333;border-radius:6px;text-align:left}</style>
+<link rel="stylesheet" href="/theme/tokens.css">
+<link rel="stylesheet" href="/theme/skins/glass.css">
+<script src="/theme/theme-loader.js"></script>
+<script>document.documentElement.dataset.skin='glass'; trkLoadCurrent();</script>
+<style>
+body{margin:0;display:grid;grid-template-columns:260px 1fr;height:100vh;font-family:system-ui,sans-serif;background:var(--bg);color:var(--text)}
+aside{background:var(--surface);padding:10px}
+main{padding:10px}
+iframe{width:100%;height:calc(100vh - 20px);border:0}
+.btn{display:block;width:100%;margin:6px 0;padding:8px;background:var(--panel);color:var(--text);border:1px solid #333;border-radius:var(--radius-md);text-align:left}
+</style>
 <body>
-  <aside><h3>Experiments</h3><div id="exps"></div></aside>
-  <main><iframe id="panel" srcdoc="<h3>Select an experiment</h3>"></iframe></main>
+  <aside>
+    <h3>Experiments</h3>
+    <input id="filter" placeholder="Filter experiments" style="width:100%;box-sizing:border-box;padding:6px;margin-bottom:8px;border-radius:4px;border:1px solid #444;background:var(--surface)" />
+    <div id="exps" aria-live="polite"></div>
+  </aside>
+  <main>
+    <iframe id="panel" srcdoc="<h3 style='font-family:system-ui'>Select an experiment</h3>"></iframe>
+  </main>
 <script>
 (async()=>{
-  const r=await fetch('/api/experiments'); const {experiments=[]}=await r.json();
-  const el=document.getElementById('exps'); el.innerHTML='';
-  for(const e of experiments){
-    const b=document.createElement('button'); b.className='btn'; b.textContent=e.id + (e.entryFrontend?'':' (no UI)');
-    b.onclick=()=>document.getElementById('panel').src='/experiments/'+e.id+'/ui/index.html';
-    el.appendChild(b);
+  const base = window.location.origin;
+  const resp = await fetch('/api/experiments');
+  const {experiments = []} = await resp.json();
+  const el = document.getElementById('exps'); el.innerHTML = '';
+  const filter = document.getElementById('filter');
+
+  function render(list){
+    el.innerHTML = '';
+    for(const e of list){
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.textContent = e.id + (e.entryFrontend ? '' : ' (no UI)');
+      b.title = e.description || e.id;
+      b.onclick = () => {
+        if(!e.entryFrontend) {
+          document.getElementById('panel').srcdoc = `<div style="padding:18px;font-family:system-ui"><h3>${e.id}</h3><p>No frontend for this experiment.</p></div>`;
+          return;
+        }
+        // Pass base so embedded UIs can call the host API when loaded in an iframe
+        document.getElementById('panel').src = `/experiments/${e.id}/ui/index.html?base=${encodeURIComponent(base)}`;
+      };
+      el.appendChild(b);
+    }
   }
+
+  render(experiments);
+  filter.addEventListener('input', ()=>{
+    const q = filter.value.trim().toLowerCase();
+    if(!q) return render(experiments);
+    render(experiments.filter(e => e.id.toLowerCase().includes(q) || (e.description||'').toLowerCase().includes(q)));
+  });
 })();
 </script>
 </body>

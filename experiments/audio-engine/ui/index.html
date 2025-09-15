@@ -20,9 +20,16 @@
     <input id="uri" type="text" placeholder="file:///C:/path/to/audio.wav or mp3" />
     <input id="file" type="file" accept="audio/*" />
     <button id="upload">Upload</button>
-    <button id="run">Run</button>
   </div>
-  <div class="small muted">Upload saves a copy to runs/_uploads and fills the URI.</div>
+  <div class="row">
+    <input id="playlistUri" type="text" placeholder="file:///C:/path/to/playlist.m3u (optional)" />
+    <input id="playlistFile" type="file" accept=".m3u,.m3u8,.txt" title="Choose a playlist file (.m3u, .m3u8, .txt)" />
+    <button id="uploadPlaylist">Upload Playlist</button>
+  </div>
+  <div class="row">
+    <button id="run">Run</button>
+    <span class="small muted">Uploads save copies to runs/_uploads and fill the URIs. Values persist locally.</span>
+  </div>
 
   <h3>Logs</h3>
   <pre id="logs">Ready.</pre>
@@ -36,6 +43,11 @@
     const arts = qs('#arts');
     const fileInput = qs('#file');
     const uriInput = qs('#uri');
+    const plFileInput = qs('#playlistFile');
+    const plUriInput = qs('#playlistUri');
+
+    const LS_AUDIO = 'trk.audio.uri';
+    const LS_PLAYLIST = 'trk.playlist.uri';
 
     async function postJSON(url, body) {
       const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
@@ -43,6 +55,21 @@
       return r.json();
     }
 
+    function saveState() {
+      try {
+        localStorage.setItem(LS_AUDIO, uriInput.value || '');
+        localStorage.setItem(LS_PLAYLIST, plUriInput.value || '');
+      } catch {}
+    }
+
+    function restoreState() {
+      try {
+        const a = localStorage.getItem(LS_AUDIO);
+        const p = localStorage.getItem(LS_PLAYLIST);
+        if (a) uriInput.value = a;
+        if (p) plUriInput.value = p;
+      } catch {}
+    }
     async function upload() {
       const f = fileInput.files?.[0];
       if (!f) { alert('Choose a file first'); return; }
@@ -51,6 +78,18 @@
       if (!r.ok) { alert('Upload failed'); return; }
       const js = await r.json();
       uriInput.value = js.uri;
+      saveState();
+    }
+
+    async function uploadPlaylist() {
+      const f = plFileInput.files?.[0];
+      if (!f) { alert('Choose a playlist file first'); return; }
+      const fd = new FormData(); fd.append('file', f);
+      const r = await fetch('/api/uploads', { method: 'POST', body: fd });
+      if (!r.ok) { alert('Upload failed'); return; }
+      const js = await r.json();
+      plUriInput.value = js.uri;
+      saveState();
     }
 
     function streamLogs(jobId) {
@@ -74,10 +113,15 @@
 
     async function runJob() {
       const uri = uriInput.value.trim();
-      if (!uri) { alert('Provide audio URI or upload a file.'); return; }
+      const playlist = plUriInput.value.trim();
+      if (!uri && !playlist) { alert('Provide audio URI or playlist, or upload a file.'); return; }
       logs.textContent = 'Starting job...';
       arts.textContent = 'Waiting for artifacts...';
-      const js = await postJSON('/api/experiments/audio-engine/jobs', { audio: uri });
+      const payload = {};
+      if (uri) payload.audio = uri;
+      if (playlist) payload.playlist = playlist;
+      saveState();
+      const js = await postJSON('/api/experiments/audio-engine/jobs', payload);
       const id = js.jobId;
       streamLogs(id);
       // Poll artifacts until job completes (simple approach)
@@ -91,6 +135,9 @@
     }
 
     qs('#upload').onclick = upload;
+    qs('#uploadPlaylist').onclick = uploadPlaylist;
     qs('#run').onclick = runJob;
+
+    restoreState();
   </script>
 </body>

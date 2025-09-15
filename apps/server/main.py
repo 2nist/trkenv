@@ -1,10 +1,12 @@
 from __future__ import annotations
-import sys
-import json, uuid, threading, queue, time, importlib.util
+import sys, os, json, uuid, threading, queue, time, importlib.util
 from pathlib import Path
 from typing import Dict, Any
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, HTMLResponse, Response
+from pydantic import BaseModel
+import uvicorn
 
 # Ensure repository root is on sys.path so local packages (services/...) can be imported
 # When running from apps/server, Python's import path may not include the project root.
@@ -31,7 +33,10 @@ def _optional_import_router(module_path: str, attr: str = 'router'):
         return None
 
 EXPS = ROOT / "experiments"
+RUNS = ROOT / "runs"
 WEB  = ROOT / "webapp" / "host"
+THEME_DIR = ROOT / "webapp" / "theme"
+THEMES = THEME_DIR / "themes"
 
 app = FastAPI(title="TRK Host")
 
@@ -72,13 +77,34 @@ _include_optional_routers(app, [
     "apps.server.routes.flows",
 ])
 
+# Lightweight Job model from upstream retained for compatibility with simpler clients.
+class SimpleJob(BaseModel):
+    id: str
+    exp_id: str
+    inputs: Dict[str, Any]
+    state: str = "queued"
+    dir: str = ""
+    logs: list[str] = []
+
+SIMPLE_JOBS: Dict[str, SimpleJob] = {}
+LOG_QUEUES: Dict[str, "queue.Queue[str]"] = {}
+
+def load_exp_class(exp_id: str):
+    py = EXPS / exp_id / "py" / "main.py"
+    if not py.exists():
+        raise HTTPException(404, f"Experiment {exp_id} not found")
+    spec = importlib.util.spec_from_file_location(f"exp_{exp_id}", py)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # type: ignore
+    return getattr(mod, "EXP")
+
 @app.get("/api/health")
 def health(): return {"ok": True, "version": "0.1.0"}
 
 @app.get("/")
 def index():
     idx = WEB / "index.html"
-    return HTMLResponse(idx.read_text(encoding="utf-8")) if idx.exists() else HTMLResponse("<h3>TRK Host</h3>")
+    return HTMLResponse(idx.read_text(encoding="utf-8")) if idx.exists() else HTMLResponse("<h3>TRK Host running</h3>")
 
 @app.get("/api/experiments")
 def list_experiments():
@@ -96,11 +122,12 @@ def exp_ui(exp_id:str, path:str="index.html"):
     ct = "text/html" if fp.suffix==".html" else "application/javascript" if fp.suffix==".js" else "text/css" if fp.suffix==".css" else "application/octet-stream"
     return Response(content=fp.read_bytes(), media_type=ct)
 
-# ---------------------- Job API ----------------------
-
-RUNS = Path("runs")
+## ---------------------- Unified Job API ----------------------
 
 class Job:
+    """Richer job model with streaming logs & status similar to earlier implementation.
+    Combines earlier in-file job runner with upstream simpler model.
+    """
     def __init__(self, job_id: str, exp_id: str, inputs: Dict[str, Any]):
         self.id = job_id
         self.exp_id = exp_id
@@ -108,11 +135,13 @@ class Job:
         self.dir = RUNS / f"job_{job_id}"
         self.dir.mkdir(parents=True, exist_ok=True)
         self.status = "pending"
+        self.logs: list[str] = []
         self._log_q: "queue.Queue[str]" = queue.Queue()
         self._done = threading.Event()
 
     def log(self, msg: str):
         line = msg if msg.endswith("\n") else msg + "\n"
+        self.logs.append(line.rstrip())
         try:
             self._log_q.put_nowait(line)
         except Exception:
@@ -121,14 +150,7 @@ class Job:
 JOBS: Dict[str, Job] = {}
 
 def _load_exp(exp_id: str):
-    py = EXPS / exp_id / "py" / "main.py"
-    if not py.exists():
-        raise HTTPException(404, f"Experiment backend not found for {exp_id}")
-    spec = importlib.util.spec_from_file_location(f"exp_{exp_id}", py)
-    mod = importlib.util.module_from_spec(spec)  # type: ignore
-    assert spec and spec.loader
-    spec.loader.exec_module(mod)  # type: ignore
-    return getattr(mod, "EXP")
+    return load_exp_class(exp_id)
 
 def _run_job(job: Job):
     try:
@@ -146,47 +168,42 @@ def _run_job(job: Job):
     finally:
         job._done.set()
 
-
 @app.post("/api/experiments/{exp_id}/jobs")
 def start_job(exp_id: str, body: Dict[str, Any]):
-    # body contains inputs for the experiment, e.g., {"audio": "file:///..."}
     job_id = uuid.uuid4().hex[:12]
     job = Job(job_id, exp_id, body or {})
     JOBS[job_id] = job
     th = threading.Thread(target=_run_job, args=(job,), daemon=True)
     th.start()
     return {"jobId": job_id, "status": job.status}
-
+@app.get("/api/jobs/{job_id}/status")
+def job_status(job_id: str):
+    j = JOBS.get(job_id)
+    if not j: raise HTTPException(404, "job not found")
+    return {"jobId": j.id, "status": j.status}
 
 @app.get("/api/jobs/{job_id}/logs/stream")
-async def stream_logs(job_id: str):
+def stream_logs(job_id: str):
     job = JOBS.get(job_id)
-    if not job:
-        raise HTTPException(404, "job not found")
-
-    async def event_gen():
-        # Simple polling loop to read from queue and stream SSE lines
+    if not job: raise HTTPException(404, "job not found")
+    def gen():
+        # Keep streaming until done and queue drained
         while True:
             try:
                 line = job._log_q.get(timeout=0.25)
                 yield f"data: {line}\n\n"
             except Exception:
-                # no log line available
                 pass
             if job._done.is_set() and job._log_q.empty():
                 yield f"data: [job:{job.id}] status={job.status}\n\n"
                 break
-            # cooperative pause
             time.sleep(0.05)
-
-    return StreamingResponse(event_gen(), media_type="text/event-stream")
-
+    return StreamingResponse(gen(), media_type="text/event-stream")
 
 @app.get("/api/jobs/{job_id}/artifacts")
 def list_artifacts(job_id: str):
     job = JOBS.get(job_id)
-    if not job:
-        raise HTTPException(404, "job not found")
+    if not job: raise HTTPException(404, "job not found")
     art = job.dir / "artifacts"
     rows = []
     if art.exists():
@@ -198,8 +215,7 @@ def list_artifacts(job_id: str):
                     "size": fp.stat().st_size,
                     "uri": fp.resolve().as_uri(),
                 })
-    return {"jobId": job_id, "status": job.status, "artifacts": rows}
-
+    return {"jobId": job.id, "status": job.status, "artifacts": rows}
 
 @app.post("/api/uploads")
 async def upload_file(file: UploadFile = File(...)):
@@ -819,8 +835,58 @@ def download_db():
     return StreamingResponse(DB_PATH.open('rb'), media_type='application/octet-stream')
 
 
+@app.get("/theme/{path:path}")
+def theme_static(path: str):
+    base = THEME_DIR
+    fp = base / path
+    if fp.is_dir():
+        fp = fp / "index.html"
+    if not fp.exists():
+        raise HTTPException(404)
+    ct = (
+        "text/css" if fp.suffix == ".css" else
+        "application/javascript" if fp.suffix == ".js" else
+        "application/json" if fp.suffix == ".json" else
+        "application/octet-stream"
+    )
+    return Response(content=fp.read_bytes(), media_type=ct)
+
+@app.get("/api/theme/list")
+def theme_list():
+    THEMES.mkdir(parents=True, exist_ok=True)
+    names = ["current"] + [p.stem for p in THEMES.glob("*.json")]
+    return {"themes": sorted(set(names))}
+
+@app.get("/api/theme/{name}.json")
+def theme_get(name: str):
+    THEMES.mkdir(parents=True, exist_ok=True)
+    fp = THEMES / f"{name}.json"
+    if name == "current" and not fp.exists():
+        fp = THEMES / "midnight.json"
+    if not fp.exists():
+        raise HTTPException(404)
+    return json.loads(fp.read_text(encoding="utf-8"))
+
+@app.post("/api/theme")
+def theme_save(payload: Dict[str, Any]):
+    THEMES.mkdir(parents=True, exist_ok=True)
+    name = payload.get("name", "user-theme").strip().replace("..", "")
+    vars = payload.get("vars", {})
+    current = {}
+    cf = THEMES / "current.json"
+    if cf.exists():
+        try:
+            current = json.loads(cf.read_text(encoding="utf-8")).get("vars", {})
+        except Exception:
+            current = {}
+    current.update(vars)
+    data = {"name": name, "vars": current}
+    fp = THEMES / f"{name}.json"
+    fp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    (THEMES / "current.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return {"ok": True, "name": name}
+
 if __name__ == "__main__":
-    import uvicorn, os
     host = os.environ.get("TRK_HOST", "127.0.0.1")
     try:
         port = int(os.environ.get("TRK_PORT", "8000"))

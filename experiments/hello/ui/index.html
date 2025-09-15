@@ -18,12 +18,16 @@
       });
     </script>
   </head>
-  <body style="font-family:system-ui; background:var(--bg); color:var(--text); margin:0;">
+  <body class="root">
     <main>
-      <section class="panel" role="region" aria-labelledby="hello-heading" style="margin:12px; padding:12px; border-radius:var(--radius-md); background:var(--panel); box-shadow:var(--shadow-1)">
+      <section class="panel demo" role="region" aria-labelledby="hello-heading">
         <h1 id="hello-heading">Hello Experiment</h1>
         <p>It works if you can read this.</p>
       </section>
     </main>
+    <style>
+      body.root { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin:0; }
+      .panel.demo { margin:12px; padding:12px; border-radius:var(--radius-md); background:var(--panel); box-shadow:var(--shadow-1); }
+    </style>
   </body>
 </html>

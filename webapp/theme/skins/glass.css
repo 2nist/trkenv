@@ -1,1 +1,13 @@
-@layer skin.glass { [data-skin="glass"] .panel { background: #141820dd; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); } }
+@layer skin.glass {
+  [data-skin="glass"] .panel {
+    /* Fallback solid background */
+    background: var(--panel);
+    /* Preferred layered effect with transparency (supported browsers) */
+    background: color-mix(in oklch, var(--panel) 75%, white 25%) / 24%;
+    -webkit-backdrop-filter: blur(10px) saturate(1.1);
+    backdrop-filter: blur(10px) saturate(1.1);
+    /* Fallback border */
+    border: 1px solid rgba(255,255,255,0.08);
+  /* Enhanced border (removed color-mix for wider compatibility) */
+  }
+}

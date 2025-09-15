@@ -1,0 +1,20 @@
+{
+  "name": "midnight",
+  "vars": {
+    "bg": "#0e1013",
+    "surface": "#141820",
+    "panel": "#171c26",
+    "text": "#e6e8ee",
+    "muted": "#aab2bf",
+    "accent-9": "#3a63ff",
+    "accent-10": "#2150ff",
+    "success-9": "#27c07d",
+    "warn-9": "#ffb020",
+    "error-9": "#ff4d6d",
+    "radius-sm": "6px",
+    "radius-md": "10px",
+    "radius-lg": "16px",
+    "shadow-1": "0 1px 2px rgb(0 0 0 / 0.2)",
+    "shadow-2": "0 4px 16px rgb(0 0 0 / 0.25)"
+  }
+}

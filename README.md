@@ -1,6 +1,6 @@
 # TRK Lab
 
-**TRK Lab** is a minimal audio/music production platform built with FastAPI backend and Next.js frontend. It provides a plugin-based architecture for audio processing workflows and experiment management.
+**TRK Lab** is a minimal audio/music production platform built with FastAPI backend, Next.js frontend (with live CSS edit mode + theming), optional flow runner, and a JUCE desktop shell. It provides a plugin-based architecture for audio processing workflows and experiment/job management.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -36,6 +36,7 @@ TRK Lab/
 ### Development Setup
 
 1. **Clone and setup:**
+
    ```bash
    git clone https://github.com/2nist/trkenv.git
    cd trkenv
@@ -43,6 +44,7 @@ TRK Lab/
    ```
 
 2. **Start development servers:**
+
    ```bash
    # Start both backend and frontend
    npm run dev:full
@@ -117,6 +119,20 @@ npm run build:frontend    # Build frontend
 # Deployment
 .\scripts\build.ps1 -Deploy  # Create deployment package
 
+### Server Quickstart (Direct)
+
+```powershell
+ . .\.venv\Scripts\Activate.ps1
+ $env:TRK_PORT = '8000'
+ python -m apps.server.main
+ # browse http://127.0.0.1:$env:TRK_PORT
+```
+
+Health probe examples:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:$env:TRK_PORT/api/health | ConvertTo-Json -Depth 4
+Invoke-RestMethod http://127.0.0.1:$env:TRK_PORT/api/experiments | ConvertTo-Json -Depth 8
 ```
 
 ### Live CSS Edit Mode (Design Layer)
@@ -307,3 +323,104 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Built with [FastAPI](https://fastapi.tiangolo.com/) and [Next.js](https://nextjs.org/)
 - Audio processing powered by [librosa](https://librosa.org/) and [demucs](https://github.com/facebookresearch/demucs)
 - UI components styled with [Tailwind CSS](https://tailwindcss.com/)
+
+### Run a flow
+
+```powershell
+python -m services.flow.runner profiles\hello.yaml
+python -m services.flow.runner profiles\rehearsal.yaml
+```
+
+### Start an audio job via API
+
+```powershell
+$audioPath = 'C:\Users\CraftAuto-Sales\Downloads\your-file.mp3'
+$uri = 'file:///' + ($audioPath -replace '\\','/')
+$body = @{ audio = $uri } | ConvertTo-Json
+$job  = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:$env:TRK_PORT/api/experiments/audio-engine/jobs" -Body $body -ContentType "application/json"
+$job
+
+1..60 | % { Start-Sleep 1; Invoke-RestMethod "http://127.0.0.1:$env:TRK_PORT/api/jobs/$($job.jobId)/status" } | ft state,id
+
+Invoke-RestMethod "http://127.0.0.1:$env:TRK_PORT/api/jobs/$($job.jobId)/artifacts" | ConvertTo-Json -Depth 6
+```
+
+Endpoints:
+
+- `GET /api/jobs/{jobId}/status`
+- `GET /api/jobs/{jobId}/artifacts`
+- `POST /api/jobs/{jobId}/cancel`
+- `GET /api/jobs/last`
+
+## Google Drive adapter (stub)
+
+Resolve `gdrive://file/<ID>` or `gdrive://<ID>` to a local cached file (public/link-shared files supported with API key):
+
+1. Create `.env` at repo root:
+
+```bash
+GDRIVE_API_KEY=YOUR_KEY
+```
+
+1. Use a GDrive URI as input (in API body or UI):
+
+```json
+{ "audio": "gdrive://file/1AbCDefGhIjKlMnOPqRStuVwxYz" }
+```
+
+Adapter logs will appear in job logs, e.g.: `"[io] start download: gdrive:..."`, `"[io] downloaded ~1.0 MB..."`, `"[io] using cached file: ..."`.
+
+## Smoke script
+
+Quick end-to-end API smoke:
+
+```powershell
+python scripts/smoke_api.py --base "http://127.0.0.1:$env:TRK_PORT" --audio $uri
+```
+
+## Desktop (JUCE) Build and Run
+
+Prerequisites: CMake, MSVC Build Tools (VS 2022), and Edge WebView2 runtime recommended.
+
+Install (one-time) using winget:
+
+```powershell
+winget install --id Kitware.CMake -e --source winget
+winget install --id Microsoft.VisualStudio.2022.BuildTools -e --source winget
+winget install --id Microsoft.EdgeWebView2Runtime -e --source winget   # optional
+```
+
+Open a NEW PowerShell so PATH updates apply, then:
+
+```powershell
+cmake --version
+where cmake
+```
+
+Configure and build:
+
+```powershell
+# From repo root
+mkdir build
+cd build
+cmake -G "Visual Studio 17 2022" -A x64 ..\apps\desktop-juce
+cmake --build . --config Release
+
+# Run
+$env:TRK_DESKTOP_HOST = "http://127.0.0.1:8000"   # optional
+.\Release\trk_desktop.exe
+```
+
+Desktop menu:
+
+- Start Rehearsal Flow → POST `/api/flows/run`
+- Start Audio Job… → choose a file, calls POST `/api/experiments/audio-engine/jobs`
+- Stop Last Job → POST `/api/jobs/{id}/cancel`
+- Open Audio Panel → `/experiments/audio-engine/ui/index.html`
+- Last Job Info → GET `/api/jobs/last`
+
+Troubleshooting:
+
+- `cmake` not found → re-open PowerShell after winget install, ensure `C:\\Program Files\\CMake\\bin` on PATH.
+- Build toolchain missing → install Visual Studio 2022 Build Tools (C++ workload). You can use the “Developer PowerShell for VS 2022”.
+- WebView blank → install WebView2 runtime or it may fall back to legacy engine.

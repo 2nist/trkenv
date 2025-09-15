@@ -36,3 +36,10 @@ wheels/
 !webapp/app/src/lib/
 !webapp/app/src/lib/*.ts
 !webapp/app/src/lib/*.tsx
+# IDE / build (added from upstream)
+.vscode/
+*.sln
+*.user
+
+# Keep build ignore (already present)
+

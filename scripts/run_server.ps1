@@ -255,3 +255,19 @@ while (-not $script:StopRequested) {
 Stop-All
 exit 0
 
+# ---------------------------------------------------------------------------
+# Legacy simple launcher retained for reference (from upstream commit):
+# (Use the unified launcher above in normal workflows.)
+#
+#   . .\.venv\Scripts\Activate.ps1
+#   $port = 8000
+#   while ($port -le 8020) {
+#       try {
+#           $listener = [System.Net.Sockets.TcpListener]::new([Net.IPAddress]::Parse('127.0.0.1'), $port)
+#           $listener.Start(); $listener.Stop(); break
+#       } catch { $port++ }
+#   }
+#   Write-Host "Starting TRK server on port $port"
+#   $env:TRK_PORT = "$port"
+#   python -m apps.server.main
+# ---------------------------------------------------------------------------

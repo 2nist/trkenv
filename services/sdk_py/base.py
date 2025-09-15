@@ -1,7 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
 import json, shutil
-
 class RunContext:
     def __init__(self, job_dir: Path, inputs: dict, logger=print, cancel_fn=lambda: False):
         self.dir = Path(job_dir); self.inputs = inputs; self.log = logger; self._cancel = cancel_fn
@@ -16,7 +15,6 @@ class RunContext:
         return dst
     def emit_json(self, name:str, data:dict):
         p = self.dir / f"{name}.json"; p.write_text(json.dumps(data, indent=2), encoding="utf-8"); return p
-
 class BaseExperiment:
     def validate(self, ctx:RunContext): return True
     def run(self, ctx:RunContext): raise NotImplementedError
