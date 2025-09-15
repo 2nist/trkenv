@@ -243,13 +243,16 @@
     --font-handwritten: var(--font-family-handwritten);
     --font-typewriter: var(--font-family-typewriter);
     --font-dymo: var(--font-family-dymo);
+    /* Upstream minimal midnight vars (merged as legacy references) */
+    --accent-10: #2150ff;
+    --success-9: #27c07d;
+    --warn-9: #ffb020;
+    --error-9: #ff4d6d;
+    --radius-sm: var(--border-radius-sm);
+    --radius-lg: var(--border-radius-lg);
+    --shadow-2: 0 4px 16px rgb(0 0 0 / 0.25);
   }
 }
 
-@layer skin.glass {
-  [data-skin="glass"] .panel {
-    background: var(--color-bg-tertiary);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-  }
-}
+@layer components {}
+@layer overrides {}

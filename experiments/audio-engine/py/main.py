@@ -1,5 +1,6 @@
 from __future__ import annotations
 from services.sdk_py.base import BaseExperiment, RunContext
+from services.io.adapters import resolve_uri
 from pathlib import Path
 import subprocess, sys, shlex, json
 
@@ -7,6 +8,19 @@ class EXP(BaseExperiment):
     def run(self, ctx: RunContext):
         job = Path(ctx.dir); work = job/"work"; work.mkdir(parents=True, exist_ok=True)
         playlist = ctx.input("playlist"); audio = ctx.input("audio")
+        # Resolve URIs to local paths if provided (supports file:/// and gdrive://)
+        try:
+            if isinstance(playlist, str) and playlist:
+                playlist_path = resolve_uri(playlist, logger=ctx.log)
+                playlist = str(playlist_path)
+        except Exception as e:
+            ctx.log(f"playlist resolve failed: {e}")
+        try:
+            if isinstance(audio, str) and audio:
+                audio_path = resolve_uri(audio, logger=ctx.log)
+                audio = str(audio_path)
+        except Exception as e:
+            ctx.log(f"audio resolve failed: {e}")
         engine_root = Path(__file__).resolve().parents[1]
         orch = engine_root/"src"/"orchestrate.py"
         if orch.exists():

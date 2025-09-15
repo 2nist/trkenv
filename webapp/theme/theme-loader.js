@@ -82,3 +82,14 @@
 	if (typeof global.trkLoadCurrent !== 'function') global.trkLoadCurrent = trkLoadCurrent;
 	if (typeof global.trkSetTheme !== 'function') global.trkSetTheme = trkSetTheme;
 })(window);
+
+// Optional: API-based loader fallback (upstream variant). If backend exposes /api/theme/current.json
+// you can call window.trkApiLoadCurrent() to pull server-provided merged theme vars.
+async function trkApiLoadCurrent(){
+	try {
+		const r = await fetch("/api/theme/current.json"); if(!r.ok) return;
+		const t = await r.json(); if(!t.vars) return;
+		for (const [k,v] of Object.entries(t.vars)) { document.documentElement.style.setProperty("--"+k, String(v)); }
+	} catch {}
+}
+if (typeof window.trkApiLoadCurrent !== 'function') window.trkApiLoadCurrent = trkApiLoadCurrent;
