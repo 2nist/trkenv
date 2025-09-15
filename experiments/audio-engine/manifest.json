@@ -1,0 +1,15 @@
+{
+  "id":"audio-engine","version":"0.1.0","interfaceVersion":"1.0",
+  "kind":"job","entryBackend":"py/main.py","entryFrontend":"ui/index.html",
+  "capabilities":["fs:read","fs:write","net","gpu"],
+  "inputs":{
+    "playlist":{"type":"asset","mime":"text/uri-list","optional":true},
+    "audio":{"type":"asset","mime":"audio/wav","optional":true}
+  },
+  "outputs":{
+    "segments":{"type":"json","typeId":"trk.segment.list@1"},
+    "midi":{"type":"asset","mime":"audio/midi"},
+    "lyrics":{"type":"json","typeId":"trk.lyrics.words@1"},
+    "metadata":{"type":"json"}
+  }
+}

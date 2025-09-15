@@ -1,0 +1,7 @@
+version: 1
+steps:
+  - id: audio
+    op: audio-engine
+    in:
+      audio: "file:///C://Users//CraftAuto-Sales//Downloads//cinematic-whoosh-boom-jam-fx-1-00-05.mp3"
+    out: {}

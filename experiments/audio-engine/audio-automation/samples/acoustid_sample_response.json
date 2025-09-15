@@ -1,0 +1,11 @@
+{
+  "note": "Example cached response structure for potential mocking",
+  "results": [
+    {
+      "score": 0.85,
+      "recording_id": "some-id",
+      "title": "Public Domain Sample",
+      "artist": "Unknown"
+    }
+  ]
+}
