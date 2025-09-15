@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run TRK server",
+      "type": "shell",
+      "command": "pwsh -NoProfile -ExecutionPolicy Bypass -Command \"& { Set-Location -LiteralPath '${workspaceFolder}'; . .\\.venv\\Scripts\\Activate.ps1; $env:TRK_PORT='8000'; python -m apps.server.main }\"",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Run smoke script",
+      "type": "shell",
+      "command": "pwsh -NoProfile -ExecutionPolicy Bypass -Command \"& { Set-Location -LiteralPath '${workspaceFolder}'; . .\\.venv\\Scripts\\Activate.ps1; python scripts/smoke_api.py --base 'http://127.0.0.1:8000' --audio 'file:///C:/path/to/audio.mp3' }\"",
+      "problemMatcher": []
+    }
+  ]
+}

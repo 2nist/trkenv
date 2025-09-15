@@ -1,0 +1,7 @@
+version: 1
+steps:
+  - id: hello
+    op: hello
+    in:
+      message: "Hello TRK!"
+    out: {}

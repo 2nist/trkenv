@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Import Test</title>
+    <style>
+        .drop-zone {
+            width: 300px;
+            height: 200px;
+            border: 2px dashed #ccc;
+            text-align: center;
+            padding: 20px;
+            margin: 20px;
+        }
+        .drop-zone.dragover {
+            border-color: #000;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Import Functionality</h1>
+    <div id="dropZone" class="drop-zone">
+        Drop JSON file here to test import
+    </div>
+    <div id="result"></div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const result = document.getElementById('result');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                result.innerHTML = `Processing ${file.name}...`;
+                
+                try {
+                    const text = await file.text();
+                    const response = await fetch('http://localhost:8000/import/json?include_lyrics=true', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: text
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        result.innerHTML = `✅ Success! Song ID: ${data.song_id}`;
+                    } else {
+                        result.innerHTML = `❌ Error: ${response.status}`;
+                    }
+                } catch (error) {
+                    result.innerHTML = `❌ Error: ${error.message}`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

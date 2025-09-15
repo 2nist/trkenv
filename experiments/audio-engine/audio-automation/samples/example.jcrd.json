@@ -1,0 +1,15 @@
+{
+  "title": "Sample Chart",
+  "sections": [
+    {
+      "name": "Verse",
+      "chords": ["C", "G", "Am", "F"]
+    },
+    {
+      "name": "Chorus",
+      "lines": [
+        {"chords": ["F", "G", "Em", "Am"]}
+      ]
+    }
+  ]
+}

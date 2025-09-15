@@ -1,0 +1,23 @@
+/* Hover states for compact and wide masking tape buttons */
+.btn-tape-sm:hover, .btn-tape-wide:hover {
+  background-color: #E0CBA8;
+  transform: translateY(-1px) rotate(0.5deg);
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+.btn-tape-sm:active, .btn-tape-wide:active {
+  transform: translateY(0) rotate(-0.5deg);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.btn-tape-sm:disabled, .btn-tape-wide:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}

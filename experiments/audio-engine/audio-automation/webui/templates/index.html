@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Audio Automation</title>
+  <style>body{font-family:system-ui,Segoe UI,Arial;margin:2rem;} .badge{display:inline-block;padding:.2rem .5rem;border-radius:.5rem;background:#eee;margin-inline-start:.5rem}</style>
+</head>
+<body>
+  <h1>Audio Automation Dashboard</h1>
+  <p>
+    <a href="/settings">Settings</a>
+  </p>
+  <section>
+    <h3>Lyrics Artifacts</h3>
+    <p>VTT: <span class="badge">{{ 'yes' if has_vtt else 'no' }}</span>
+       SRT: <span class="badge">{{ 'yes' if has_srt else 'no' }}</span></p>
+  </section>
+</body>
+</html>
