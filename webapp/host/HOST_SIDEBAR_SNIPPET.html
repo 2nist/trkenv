@@ -1,0 +1,11 @@
+<!-- HOST_SIDEBAR_SNIPPET.html: drop this into your sidebar template where you want the lab menu -->
+<div id="lab-menu-root">
+  <div id="lab-menu-loading">Loading modules...</div>
+</div>
+<script type="module">
+  import { renderLabMenu } from '/lab-menu.js';
+  const el = document.getElementById('lab-menu-root');
+  if (el) {
+    renderLabMenu(el).catch(e=>{ el.textContent = 'Menu load error: '+e })
+  }
+</script>
