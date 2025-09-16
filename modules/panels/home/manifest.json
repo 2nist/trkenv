@@ -1,0 +1,8 @@
+{
+  "id": "home",
+  "name": "Home",
+  "kind": "panel",
+  "description": "A simple home panel providing quick links and info.",
+  "version": "0.1.0",
+  "ui": "ui/index.html"
+}
