@@ -21,7 +21,17 @@ def registry():
             data = json.loads(man.read_text(encoding='utf-8'))
         except Exception:
             continue
+        # attach the manifest path so the host can resolve UI assets if desired
+        data = data or {}
+        data.setdefault('path', str(man.parent))
+        # ensure id/name default values
+        dirname = man.parent.name
+        data.setdefault('id', data.get('id') or dirname)
+        data.setdefault('name', data.get('name') or data.get('id'))
         kind = data.get('kind') or 'panel'
+        # skip empty manifests (e.g., {})
+        if not isinstance(data, dict) or (len(data.keys()) == 0):
+            continue
         if kind == 'tool':
             out['tools'].append(data)
         elif kind == 'job':
