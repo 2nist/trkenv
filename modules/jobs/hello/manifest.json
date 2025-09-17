@@ -1,0 +1,7 @@
+{
+  "id":"hello","version":"0.1.0","interfaceVersion":"1.0",
+  "kind":"job","entryFrontend":"ui/index.html","entryBackend":"py/main.py",
+  "capabilities":["fs:read","fs:write"],
+  "inputs":{"message":{"type":"string","default":"Hello TRK!"}},
+  "outputs":{"json":{"type":"json"}}
+}

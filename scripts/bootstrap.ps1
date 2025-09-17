@@ -362,10 +362,10 @@ if (-not $venvExists) {
 if (-not $env:TRK_SKIP_PIP_UPGRADE -or $env:TRK_SKIP_PIP_UPGRADE -ne '1') {
   try { python -m pip install --upgrade pip } catch { Write-Warning "pip upgrade skipped: $($_.Exception.Message)" }
 }
-pip install -r apps/server/requirements.txt
+python -m pip install -r apps/server/requirements.txt
 
 # 14) Quick server health check via uvicorn
-$proc = Start-Process -PassThru -NoNewWindow -FilePath python -ArgumentList "-m uvicorn apps.server.main:app --host 127.0.0.1 --port 8000"
+$proc = Start-Process -PassThru -NoNewWindow -FilePath python -ArgumentList "-m apps.server.main"
 Start-Sleep -Seconds 2
 try {
   $resp = Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/health

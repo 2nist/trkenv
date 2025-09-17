@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TRK Flow",
+  "type":"object",
+  "required":["id","nodes"],
+  "properties":{
+    "id":{"type":"string"},
+    "nodes":{"type":"array","items":{
+      "type":"object",
+      "required":["id","ref"],
+      "properties":{
+        "id":{"type":"string"},
+        "ref":{"type":"string"},
+        "in":{"type":"object"},
+        "out":{"type":"object"}
+      }
+    }}
+  }
+}

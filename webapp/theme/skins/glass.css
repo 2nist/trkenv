@@ -1,0 +1,1 @@
+@layer skin.glass { [data-skin="glass"] .panel { background: #141820dd; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); } }
