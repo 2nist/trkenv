@@ -60,7 +60,7 @@
 	[switch]$All,
 	[int]$ApiPort = 8000,
 	[int]$WebPort = 3000,
-	[string]$Host = '127.0.0.1',
+	[string]$BindHost = '127.0.0.1',
 	[switch]$Reload,
 	[string]$Profile = 'profiles/hello.yaml',
 	[string]$EnvFile = '.env'
@@ -152,12 +152,12 @@ function Start-Backend {
 	Write-Host "Launching backend (port $ApiPort)" -ForegroundColor Cyan
 	Ensure-Venv
 	Ensure-PythonDeps
-	$env:TRK_HOST = $Host
+	$env:TRK_HOST = $BindHost
 	$env:TRK_PORT = $ApiPort
-	$env:NEXT_PUBLIC_API_BASE = "http://$Host:$ApiPort"
+	$env:NEXT_PUBLIC_API_BASE = "http://${BindHost}:$ApiPort"
 	if ($Reload) {
 		$cmd = 'uvicorn'
-		$args = "apps.server.main:app --host $Host --port $ApiPort --reload"
+		$args = "apps.server.main:app --host $BindHost --port $ApiPort --reload"
 	} else {
 		# Use python -m so import side effects mimic production start
 		$cmd = 'python'
@@ -170,10 +170,10 @@ function Start-Backend {
 function Start-Frontend {
 	Write-Host "Launching frontend (port $WebPort)" -ForegroundColor Cyan
 	Ensure-NodeModules
-	$env:NEXT_PUBLIC_API_BASE = "http://$Host:$ApiPort"
+	$env:NEXT_PUBLIC_API_BASE = "http://${BindHost}:$ApiPort"
 	pushd webapp/app
 	# Directly run next dev with explicit host/port (avoid argument flattening issues)
-	$nextArgs = @('next','dev','-H', $Host, '-p', "$WebPort")
+	$nextArgs = @('next','dev','-H', $BindHost, '-p', "$WebPort")
 	$p = Start-Process -PassThru -NoNewWindow -FilePath npx -ArgumentList $nextArgs
 	popd
 	Add-Proc $p 'frontend'
@@ -236,7 +236,7 @@ Show-Status
 Write-Host "\nPress: 's' = status, 'q' = quit" -ForegroundColor DarkGray
 
 while (-not $StopRequested) {
-	if ($Host.UI.RawUI.KeyAvailable) {
+	if ($Host.UI.RawUI.KeyAvailable) {  # built-in $Host (no longer shadowed)
 		$key = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
 		switch ($key.Character) {
 			'q' { break }
