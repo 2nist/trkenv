@@ -30,3 +30,9 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# --- Overrides ---------------------------------------------------
+# Allow committing the React source lib under webapp (needed for css edit mode source)
+!webapp/app/src/lib/
+!webapp/app/src/lib/*.ts
+!webapp/app/src/lib/*.tsx
