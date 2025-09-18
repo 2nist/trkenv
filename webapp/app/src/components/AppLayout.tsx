@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ThemeEditor, useThemeEditor } from '../lib/theme-editor';
 import { Button } from '../lib/design-system';
+import { CssEditProvider, useCssEdit } from '../lib/css-edit-mode';
 
 // ===== THEME EDITOR SIDEBAR INTEGRATION =====
 
@@ -10,30 +11,43 @@ interface AppLayoutProps {
   onToggleThemeEditor?: () => void;
 }
 
-export const AppLayout: React.FC<AppLayoutProps> = ({
+const LayoutInner: React.FC<AppLayoutProps> = ({
   children,
   showThemeEditor = false,
   onToggleThemeEditor,
 }) => {
   const themeEditor = useThemeEditor();
+  let cssEdit: ReturnType<typeof useCssEdit> | undefined;
+  try { cssEdit = useCssEdit(); } catch {}
 
   return (
-  <div className="flex min-h-screen bg-[var(--page-bg,#ffffff)]">
+    <div className="flex min-h-screen bg-[var(--page-bg,#ffffff)]">
       {/* Left Sidebar */}
-      <div className="w-80 border-r border-gray-200 bg-white flex flex-col">
+      <div className="w-80 border-r border-gray-200 bg-[var(--layout-sidebar-bg,#f7f7f9)] flex flex-col">
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-gray-200 bg-white">
-          <div className="flex items-center justify-between">
+        <div className="p-4 border-b border-gray-200 bg-[var(--layout-header-bg,#ffffff)]">
+          <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-gray-900">
               {showThemeEditor ? 'Theme Editor' : 'Navigation'}
             </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onToggleThemeEditor}
-            >
-              {showThemeEditor ? 'Navigation' : 'Theme Editor'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onToggleThemeEditor}
+              >
+                {showThemeEditor ? 'Navigation' : 'Theme Editor'}
+              </Button>
+              {cssEdit && (
+                <Button
+                  variant={cssEdit.enabled ? 'primary' : 'outline'}
+                  size="sm"
+                  onClick={cssEdit.toggle}
+                >
+                  {cssEdit.enabled ? 'CSS Edit: ON' : 'CSS Edit'}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -90,13 +104,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                   Quick Actions
                 </h3>
                 <div className="space-y-2">
-                  <button className="w-full px-3 py-2 text-sm text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 rounded-md transition-colors text-left">
+                  <button className="w-full px-3 py-2 text-sm text-gray-700 bg-[var(--layout-surface-bg,#ffffff)] hover:bg-gray-100 border border-gray-300 rounded-md transition-colors text-left radius-var">
                     New Project
                   </button>
-                  <button className="w-full px-3 py-2 text-sm text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 rounded-md transition-colors text-left">
+                  <button className="w-full px-3 py-2 text-sm text-gray-700 bg-[var(--layout-surface-bg,#ffffff)] hover:bg-gray-100 border border-gray-300 rounded-md transition-colors text-left radius-var">
                     Import
                   </button>
-                  <button className="w-full px-3 py-2 text-sm text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 rounded-md transition-colors text-left">
+                  <button className="w-full px-3 py-2 text-sm text-gray-700 bg-[var(--layout-surface-bg,#ffffff)] hover:bg-gray-100 border border-gray-300 rounded-md transition-colors text-left radius-var">
                     Export
                   </button>
                 </div>
@@ -107,7 +121,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wide">
                   Current Theme
                 </h3>
-                <div className="p-3 bg-white rounded-md border border-gray-200">
+                <div className="p-3 bg-[var(--layout-surface-bg,#ffffff)] rounded-md border border-gray-200">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-4 h-4 rounded-full bg-blue-500 border border-gray-300"></div>
                     <span className="text-sm font-medium text-gray-900">
@@ -131,6 +145,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     </div>
   );
 };
+
+export const AppLayout: React.FC<AppLayoutProps> = (props) => (
+  <CssEditProvider>
+    <LayoutInner {...props} />
+  </CssEditProvider>
+);
 
 // ===== HOOK FOR LAYOUT STATE =====
 
