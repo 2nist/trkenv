@@ -1,0 +1,1 @@
+@layer skin.glass { [data-skin="glass"] .panel { background: color-mix(in oklch, var(--panel) 75%, white 25%) / 24%; backdrop-filter: blur(10px) saturate(1.1); border: 1px solid color-mix(in oklch, var(--panel) 70%, white 30%);} }

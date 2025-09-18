@@ -1,0 +1,229 @@
+:root {
+  /* ===== COLORS ===== */
+
+  /* Primary Colors */
+  --color-primary: #c09254;
+  --color-primary-50: #f7f3ed;
+  --color-primary-100: #ede2d1;
+  --color-primary-200: #dcc092;
+  --color-primary-300: #c09254;
+  --color-primary-400: #a67a45;
+  --color-primary-500: #8c6236;
+  --color-primary-600: #72502c;
+  --color-primary-700: #5c4124;
+  --color-primary-800: #49331e;
+  --color-primary-900: #3c2a19;
+  --color-primary-950: #241a10;
+
+  /* Neutral Colors */
+  --color-neutral: #78716c;
+  --color-neutral-50: #f9f8f7;
+  --color-neutral-100: #f1efed;
+  --color-neutral-200: #e3dfda;
+  --color-neutral-300: #d1ccc4;
+  --color-neutral-400: #b8b1a6;
+  --color-neutral-500: #9e9688;
+  --color-neutral-600: #78716c;
+  --color-neutral-700: #5f5952;
+  --color-neutral-800: #4b4641;
+  --color-neutral-900: #3f3a35;
+  --color-neutral-950: #22201d;
+
+  /* Semantic Colors */
+  --color-success: #16a34a;
+  --color-warning: #ca8a04;
+  --color-error: #dc2626;
+  --color-info: #2563eb;
+
+  /* Background Colors */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f9fa;
+  --color-bg-tertiary: #e9ecef;
+  --color-bg-overlay: rgba(20, 15, 10, 0.95);
+
+  /* Text Colors */
+  --color-text-primary: #212529;
+  --color-text-secondary: #6c757d;
+  --color-text-tertiary: #adb5bd;
+  --color-text-inverse: #ffffff;
+
+  /* Border Colors */
+  --color-border-light: #e9ecef;
+  --color-border-medium: #dee2e6;
+  --color-border-dark: #6c757d;
+
+  /* ===== SPACING ===== */
+  --spacing-0: 0px;
+  --spacing-px: 1px;
+  --spacing-0_5: 0.125rem;
+  --spacing-1: 0.25rem;
+  --spacing-1_5: 0.375rem;
+  --spacing-2: 0.5rem;
+  --spacing-2_5: 0.625rem;
+  --spacing-3: 0.75rem;
+  --spacing-3_5: 0.875rem;
+  --spacing-4: 0.5rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-7: 1.75rem;
+  --spacing-8: 1rem;
+  --spacing-9: 2.25rem;
+  --spacing-10: 2.5rem;
+  --spacing-11: 2.75rem;
+  --spacing-12: 3rem;
+  --spacing-14: 3.5rem;
+  --spacing-16: 1rem;
+  --spacing-20: 5rem;
+  --spacing-24: 1.5rem;
+  --spacing-28: 7rem;
+  --spacing-32: 2rem;
+  --spacing-36: 9rem;
+  --spacing-40: 10rem;
+  --spacing-44: 11rem;
+  --spacing-48: 12rem;
+  --spacing-52: 13rem;
+  --spacing-56: 14rem;
+  --spacing-60: 15rem;
+  --spacing-64: 4rem;
+  --spacing-72: 18rem;
+  --spacing-80: 20rem;
+  --spacing-96: 24rem;
+
+  /* Legacy spacing (backward compatibility) */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+
+  /* ===== TYPOGRAPHY ===== */
+
+  /* Font Families */
+  --font-family-sans: Inter, system-ui, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-family-handwritten: 'Sharpie-Regular', 'Kalam', cursive;
+  --font-family-typewriter: 'Tox Typewriter', 'Courier New', monospace;
+  /* Map dymo family to Sharpie to reduce Dymo usage */
+  --font-family-dymo: 'Sharpie-Regular', 'Kalam', cursive;
+
+  /* Font Sizes */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+
+  /* Dymo Font Sizes (twice as big) */
+  --font-size-dymo-base: 2rem;
+  --font-size-dymo-lg: 2.5rem;
+  --font-size-dymo-xl: 3rem;
+  --font-size-dymo-2xl: 4rem;
+
+  /* Font Weights */
+  --font-weight-thin: 100;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
+
+  /* Line Heights */
+  --line-height-tight: 1.25;
+  --line-height-snug: 1.375;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  --line-height-loose: 2;
+
+  /* Letter Spacing */
+  --letter-spacing-tighter: -0.05em;
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0em;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+  --letter-spacing-widest: 0.1em;
+  --letter-spacing-dymo: -0.08em;
+
+  /* ===== BORDERS ===== */
+  --border-radius-none: 0px;
+  --border-radius-sm: 0.125rem;
+  --border-radius: 0.25rem;
+  --border-radius-md: 0.375rem;
+  --border-radius-lg: 0.5rem;
+  --border-radius-xl: 0.75rem;
+  --border-radius-2xl: 1rem;
+  --border-radius-3xl: 1.5rem;
+  --border-radius-full: 9999px;
+
+  --border-width-0: 0px;
+  --border-width-1: 1px;
+  --border-width-2: 2px;
+  --border-width-4: 4px;
+  --border-width-8: 8px;
+
+  /* ===== SHADOWS ===== */
+  --shadow-none: none;
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* ===== ANIMATIONS ===== */
+  --animation-spin-slow: spin 3s linear infinite;
+  --animation-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animation-bounce-slow: bounce 2s infinite;
+
+  /* ===== TRANSITIONS ===== */
+  --transition-duration: 150ms;
+  --transition-duration-0: 0ms;
+  --transition-duration-25: 25ms;
+  --transition-duration-50: 50ms;
+  --transition-duration-75: 75ms;
+  --transition-duration-100: 100ms;
+  --transition-duration-150: 150ms;
+  --transition-duration-200: 200ms;
+  --transition-duration-300: 300ms;
+  --transition-duration-500: 500ms;
+  --transition-duration-700: 700ms;
+  --transition-duration-1000: 1000ms;
+
+  /* ===== BACKWARD COMPATIBILITY ===== */
+  /* Palette */
+  --bg: #0b0b0c;
+  --fg: #f5f7fa;
+  --primary: #6ee7b7;
+  --secondary: #93c5fd;
+  --muted: #9aa3af;
+  --border: #2a2d33;
+  --cream: #f8f5f0;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 14px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.25);
+
+  /* Fonts */
+  --font-sans: Poppins, Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI,
+    Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+}

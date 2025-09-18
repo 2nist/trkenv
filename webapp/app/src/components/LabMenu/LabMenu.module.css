@@ -1,0 +1,45 @@
+/* Simple, lightweight styles for the LabMenu component */
+.lab-menu-root {
+  display: block;
+  padding: 8px;
+}
+.lab-loading, .lab-error {
+  padding: 8px;
+  color: #6b7280; /* gray-500 */
+  font-size: 13px;
+}
+.lab-section {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+.lab-section-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: #111827; /* gray-900 */
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.lab-section-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.lab-item {
+  margin: 2px 0;
+}
+.lab-link {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #111827;
+}
+.lab-link:hover {
+  background: rgba(17,24,39,0.06);
+}
+.lab-link:active {
+  transform: translateY(0.5px);
+}

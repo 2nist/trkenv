@@ -1,0 +1,13 @@
+// lab-menu.js (no CSS changes; uses your existing styles)
+// Call renderLabMenu(sidebarElement) to populate from /api/registry
+export async function renderLabMenu(el){
+  try{ const r=await fetch('/api/registry'); if(!r.ok) throw new Error('registry failed'); const reg=await r.json();
+    const mk=(title,items)=>{ const wrap=document.createElement('div'); const h=document.createElement('h3'); h.textContent=title; wrap.appendChild(h);
+      const ul=document.createElement('ul'); ul.style.listStyle='none'; ul.style.padding='0';
+      items.forEach(m=>{ const li=document.createElement('li'); const a=document.createElement('a'); a.textContent=m.name||m.id; a.href='/experiments/'+m.id+'/ui/index.html';
+        a.onclick=(e)=>{ e.preventDefault(); const iframe=document.querySelector('iframe#panel'); if(iframe){ iframe.src=a.href; } };
+        li.appendChild(a); ul.appendChild(li);
+      }); wrap.appendChild(ul); el.appendChild(wrap); };
+    el.innerHTML=''; mk('Start',[{id:'home',name:'Home'}]); mk('Panels',reg.panels||[]); mk('Tools',reg.tools||[]); mk('Jobs',reg.jobs||[]); mk('Devices',reg.devices||[]); mk('Datasets',reg.datasets||[]); mk('Exports',reg.exporters||[]);
+  }catch(e){ el.textContent='Menu error: '+e; }
+}

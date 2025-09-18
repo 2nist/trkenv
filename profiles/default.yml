@@ -1,0 +1,4 @@
+lyrics:
+  allowOnline: true
+  prefer: lrclib
+  cacheDir: data/lyrics_cache

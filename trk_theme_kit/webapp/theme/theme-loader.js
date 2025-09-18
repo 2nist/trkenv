@@ -1,0 +1,1 @@
+async function trkLoadCurrent(){const r=await fetch('/api/theme/current.json');if(!r.ok)return;const t=await r.json();for(const[k,v]of Object.entries(t.vars))document.documentElement.style.setProperty(`--${k}`,String(v));}window.trkLoadCurrent=trkLoadCurrent;

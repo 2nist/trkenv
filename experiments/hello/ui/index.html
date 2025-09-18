@@ -1,5 +1,33 @@
-<!doctype html><meta charset="utf-8"/>
-<body style="font-family:sans-serif">
-  <h3>Hello Experiment</h3>
-  <p>Use the flow runner or the API to start jobs.</p>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Hello Experiment</title>
+    <link rel="stylesheet" href="/theme/tokens.css">
+    <link rel="stylesheet" href="/theme/skins/glass.css">
+    <script src="/theme/theme-loader.js" defer></script>
+    <script>
+      // set desired skin early, call loader if available after it loads
+      document.documentElement.dataset.skin = 'glass';
+      // guard the call so missing loader won't throw
+      window.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.trkLoadCurrent === 'function') {
+          try { window.trkLoadCurrent(); } catch (e) { console.warn('trkLoadCurrent failed', e); }
+        }
+      });
+    </script>
+  </head>
+  <body class="root">
+    <main>
+      <section class="panel demo" role="region" aria-labelledby="hello-heading">
+        <h1 id="hello-heading">Hello Experiment</h1>
+        <p>It works if you can read this.</p>
+      </section>
+    </main>
+    <style>
+      body.root { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin:0; }
+      .panel.demo { margin:12px; padding:12px; border-radius:var(--radius-md); background:var(--panel); box-shadow:var(--shadow-1); }
+    </style>
+  </body>
+</html>

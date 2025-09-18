@@ -1,0 +1,770 @@
+@import "./tokens.css";
+@import "./button-variants.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --------------------------------------------------
+   Font-face declarations and theme variables
+   Replace the src URLs with real font files placed in /public/fonts/
+-------------------------------------------------- */
+@font-face {
+  font-family: 'Tox Typewriter';
+  src: url('/fonts/Tox Typewriter.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Sharpie-Regular';
+  src: url('/fonts/Sharpie-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Dymo';
+  src: url('/fonts/Dymo.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* font name variables used by utility classes */
+  --font-typewriter: 'Tox Typewriter', monospace;
+  --font-handwritten: 'Sharpie-Regular', cursive;
+  --font-dymo: 'Dymo', sans-serif;
+
+  /* Masking tape visual tokens (override per component if needed) */
+  --tape-bg: #E5D3B3;
+  --tape-color: #1a1a1a;
+  --tape-font-size: 24px;
+  --tape-padding: 12px 20px;
+
+  /* Vintage timeline tokens */
+  --vt-color: #f5f5dc;
+  --vt-font-family: var(--font-typewriter);
+  --vt-padding-x: 20px;
+}
+
+html,
+body,
+#__next {
+  height: 100%;
+}
+body {
+  background: #B79F7C;
+  color: #171616;
+  font-family: var(--font-typewriter, "Tox Typewriter", monospace);
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+  background-image:
+    /* High-contrast wrinkle texture patterns */
+    linear-gradient(45deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(-45deg, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    /* Diagonal crease shadows */
+    linear-gradient(135deg, rgba(0, 0, 0, 0.07) 2px, transparent 2px),
+    linear-gradient(-135deg, rgba(0, 0, 0, 0.05) 2px, transparent 2px),
+    /* Major fold lines */
+    linear-gradient(23deg, rgba(0, 0, 0, 0.06) 1px, transparent 3px),
+    linear-gradient(67deg, rgba(0, 0, 0, 0.04) 1px, transparent 4px),
+    linear-gradient(156deg, rgba(0, 0, 0, 0.05) 1px, transparent 3px),
+    linear-gradient(89deg, rgba(0, 0, 0, 0.03) 1px, transparent 5px),
+    /* Paper fiber texture */
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.02) 0px, transparent 1px, rgba(0, 0, 0, 0.015) 2px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.015) 0px, transparent 1px, rgba(0, 0, 0, 0.01) 2px),
+    /* Original kraft dots */
+    radial-gradient(circle at 25% 25%, rgba(90, 70, 45, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 75% 75%, rgba(90, 70, 45, 0.08) 1px, transparent 1px);
+  background-size:
+    /* High-contrast wrinkles */
+    8px 8px,
+    12px 12px,
+    4px 4px,
+    6px 6px,
+    /* Diagonal creases */
+    16px 16px,
+    14px 14px,
+    /* Major fold lines */
+    24px 24px,
+    32px 32px,
+    28px 28px,
+    20px 20px,
+    /* Paper fiber */
+    3px 3px,
+    3px 3px,
+    /* Kraft dots */
+    18px 18px,
+    22px 22px;
+}
+
+:root {
+  --footer-height: 72px; /* default footer height; keep in sync with component */
+}
+
+/* Transition for the cylindrical timeline content container */
+.timeline-content {
+  transition: transform 0.2s ease-out;
+  /* ensure content isn't obscured by a fixed footer */
+  padding-bottom: var(--footer-height);
+}
+
+/* Font utility classes */
+.font-handwritten {
+  font-family: var(--font-handwritten);
+}
+
+/* Utility: variable-based radius application */
+.radius-var {
+  border-radius: var(--radius-button, var(--radius-base, var(--border-radius, 8px)));
+}
+
+/* CSS Edit Mode highlight */
+.css-edit-hover {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+  cursor: pointer !important;
+}
+.css-edit-panel {
+  font-family: system-ui, sans-serif;
+}
+
+/* Special Elite font utility (used sparingly for headings) */
+.font-special-elite {
+  font-family: 'Special Elite', serif;
+}
+
+.font-typewriter {
+  font-family: var(--font-typewriter);
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+  color: #000000;
+  font-weight: 700; /* main text should be bold per design */
+}
+
+.font-dymo {
+  font-family: var(--font-dymo);
+}
+
+/* Debug panel helper: ensure interactive debug overlay is on top and receives pointer events */
+.debug-panel {
+  z-index: 10001;
+  pointer-events: auto;
+}
+
+/* DYMO Label Styles */
+.dymo-tab {
+  /* Use Sharpie for label styling */
+  font-family: var(--font-handwritten, "Sharpie-Regular", cursive);
+  font-size: 42px;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  padding: 8px 12px;
+  background: transparent;
+  color: #000000;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.dymo-tab:nth-child(1) { transform: rotate(-1.5deg); }
+.dymo-tab:nth-child(2) { transform: rotate(2.1deg); }
+.dymo-tab:nth-child(3) { transform: rotate(-0.8deg); }
+.dymo-tab:nth-child(4) { transform: rotate(1.3deg); }
+.dymo-tab:nth-child(5) { transform: rotate(-2.2deg); }
+.dymo-tab:nth-child(6) { transform: rotate(0.9deg); }
+.dymo-tab:nth-child(7) { transform: rotate(-1.1deg); }
+.dymo-tab:nth-child(8) { transform: rotate(1.7deg); }
+
+.dymo-tab:hover {
+  opacity: 0.7;
+}
+
+.dymo-tab.active {
+  opacity: 1;
+}
+
+.dymo-tab.record {
+  color: #000000;
+}
+
+.dymo-tab.record:hover {
+  opacity: 0.7;
+}
+
+.font-dymo {
+  /* Map legacy dymo utility to Sharpie for now */
+  font-family: var(--font-handwritten, "Sharpie-Regular", cursive);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Typewriter text styles - all body text should look uniform */
+p, div, span, input, textarea, label, li {
+  font-family: var(--font-typewriter);
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+  color: #000000;
+  font-weight: 700; /* ensure main text is bold */
+}
+
+/* Headings use typewriter but slightly larger */
+h1, h2, h3, h4, h5, h6 {
+  /* Switch headers to Sharpie (handwritten) */
+  font-family: var(--font-handwritten);
+  color: #000000;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+h1 { font-size: 18px; }
+h2 { font-size: 16px; }
+h3 { font-size: 15px; }
+h4, h5, h6 { font-size: 14px; }
+
+/* Fun random strikethrough effect - vintage editing vibes */
+.typewriter-strike {
+  text-decoration: line-through;
+  text-decoration-color: #000000;
+  text-decoration-thickness: 1px;
+}
+
+/* Occasionally strike random words in typewriter text */
+.typewriter-text {
+  font-family: var(--font-typewriter, "Tox Typewriter", monospace);
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: 0.05em;
+  color: #000000;
+}
+
+.card {
+  @apply rounded-lg shadow p-4 border;
+  background-color: color-mix(in oklab, var(--bg) 90%, transparent);
+}
+
+.btn {
+  @apply inline-flex items-center justify-center;
+  background-color: var(--tape-bg);
+  font-family: var(--font-handwritten);
+  font-weight: 400;
+  font-size: var(--tape-font-size);
+  color: var(--tape-color);
+  border: none;
+  padding: 12px 20px;
+  min-width: 80px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  /* Torn edges using clip-path */
+  clip-path: polygon(
+    2% 0%,
+    98% 0%,
+    100% 15%,
+    99% 35%,
+    100% 55%,
+    98% 75%,
+    100% 90%,
+    97% 100%,
+    3% 100%,
+    0% 85%,
+    1% 65%,
+    0% 45%,
+    2% 25%,
+    0% 10%
+  );
+
+  /* Tape texture using background patterns */
+  background-image:
+    linear-gradient(90deg, rgba(212, 194, 160, 0.3) 0px, transparent 1px),
+    linear-gradient(0deg, rgba(212, 194, 160, 0.2) 0px, transparent 1px),
+    radial-gradient(circle at 25% 25%, rgba(180, 150, 120, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 75% 75%, rgba(200, 170, 140, 0.08) 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px, 12px 12px, 10px 10px;
+
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.btn:hover {
+  background-color: #E0CBA8;
+  transform: translateY(-1px) rotate(0.5deg);
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+  transform: translateY(0) rotate(-0.5deg);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Masking tape button style with torn edges and texture */
+.btn-tape {
+  background-color: var(--tape-bg);
+  font-family: var(--font-handwritten);
+  font-weight: 400;
+  font-size: var(--tape-font-size);
+  color: var(--tape-color);
+  border: none;
+  padding: var(--tape-padding);
+  min-width: 80px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  /* Torn edges using clip-path */
+  clip-path: polygon(
+    2% 0%,
+    98% 0%,
+    100% 15%,
+    99% 35%,
+    100% 55%,
+    98% 75%,
+    100% 90%,
+    97% 100%,
+    3% 100%,
+    0% 85%,
+    1% 65%,
+    0% 45%,
+    2% 25%,
+    0% 10%
+  );
+
+  /* Tape texture using background patterns */
+  background-image:
+    linear-gradient(90deg, rgba(212, 194, 160, 0.3) 0px, transparent 1px),
+    linear-gradient(0deg, rgba(212, 194, 160, 0.2) 0px, transparent 1px),
+    radial-gradient(circle at 25% 25%, rgba(180, 150, 120, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 75% 75%, rgba(200, 170, 140, 0.08) 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px, 12px 12px, 10px 10px;
+
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.btn-tape:hover {
+  background-color: #E0CBA8;
+  transform: translateY(-1px) rotate(0.5deg);
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+.btn-tape:active {
+  transform: translateY(0) rotate(-0.5deg);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.btn-tape:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Cylindrical Timeline Styles */
+.timeline-content {
+  transition: transform 0.2s ease-out;
+}
+
+/* Vintage Cylindrical Timeline Container */
+.cylindrical-timeline {
+  /* Dark background with cylindrical shading gradient */
+  background:
+    /* Enhanced cylindrical shading - dark edges to center highlight */
+    linear-gradient(90deg,
+      rgba(20, 15, 10, 0.95) 0%,          /* Very dark left edge */
+      rgba(30, 22, 15, 0.85) 8%,          /* Dark transition start */
+      rgba(40, 30, 20, 0.75) 12.5%,       /* 1/8 transition zone */
+      rgba(60, 45, 30, 0.5) 20%,          /* Lighter shadow */
+      rgba(80, 60, 40, 0.3) 25%,          /* Approaching center */
+      rgba(100, 75, 50, 0.1) 40%,         /* Near center */
+      rgba(120, 90, 60, 0.05) 50%,        /* Center highlight (TDC) */
+      rgba(100, 75, 50, 0.1) 60%,         /* Near center */
+      rgba(80, 60, 40, 0.3) 75%,          /* Approaching edge */
+      rgba(60, 45, 30, 0.5) 80%,          /* Lighter shadow */
+      rgba(40, 30, 20, 0.75) 87.5%,       /* 1/8 transition zone */
+      rgba(30, 22, 15, 0.85) 92%,         /* Dark transition end */
+      rgba(20, 15, 10, 0.95) 100%         /* Very dark right edge */
+    ),
+    /* Subtle warm red ambient glow */
+    radial-gradient(ellipse at 50% 50%,
+      rgba(180, 60, 40, 0.12) 0%,
+      rgba(180, 60, 40, 0.06) 30%,
+      transparent 60%
+    ),
+    /* Dark base color */
+    #dcc299;
+
+  /* Enhanced horizontal scan lines for cylinder texture */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      rgba(0, 0, 0, 0.08) 1px,
+      rgba(0, 0, 0, 0.08) 2px
+    );
+}
+
+/* Make the timeline rails span the full viewport width */
+.cylindrical-timeline,
+.timeline-content {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  left: 0;
+  right: 0;
+}
+
+/* Ensure individual rails (elements) fill the available width and keep padding inside the box */
+.vintage-timeline-element {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding-left: var(--vt-padding-x); /* breathing room from edges */
+  padding-right: var(--vt-padding-x);
+  color: var(--vt-color);
+  font-family: var(--vt-font-family);
+}
+
+/* If inner lane items are inline, make them wrap instead of overflowing */
+.timeline-content > * {
+  white-space: normal;
+}
+
+/* Mechanical Playhead - Stationary at Center */
+.cylindrical-playhead {
+  position: fixed;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  /* Keep playhead above overlay */
+  z-index: 200;
+  pointer-events: none;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(40, 40, 40, 0.9) 0%,
+    rgba(80, 80, 80, 1) 10%,
+    rgba(120, 120, 120, 1) 50%,
+    rgba(80, 80, 80, 1) 90%,
+    rgba(40, 40, 40, 0.9) 100%
+  );
+
+  box-shadow:
+    0 0 6px rgba(120, 120, 120, 0.6),
+    0 0 12px rgba(180, 60, 40, 0.3),
+    inset 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+/* CSS variable driven layout helpers */
+.var-left { left: var(--left, 0px); }
+.var-width { width: var(--width, auto); }
+.var-height { height: var(--item-height, 32px); line-height: var(--item-height, 32px); }
+.var-transform { transform: var(--transform, translateY(-50%)); }
+/* Vertical/top helper */
+.var-top { top: var(--top, 0px); }
+
+/* Timeline wrapper consumes width/transform/item-height set as CSS variables via JS */
+.timeline-wrapper { width: var(--width, 100%); transform: var(--transform, none); min-height: var(--min-height, 0px); }
+/* Section backgrounds provided via --bg-gradient */
+.section-bg { background: var(--bg-gradient, #334155); }
+.vertical-label { writing-mode: vertical-rl; text-orientation: mixed; }
+/* Ruler label helpers */
+.ruler-label-left { left: var(--left, 2px); }
+.ruler-label-top { top: var(--top, 1px); }
+.ruler-label-offset { transform: translateX(var(--left-offset, 2px)); }
+
+/* Playhead mechanical details */
+.cylindrical-playhead::before {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: -3px;
+  right: -3px;
+  height: 8px;
+  background: linear-gradient(
+    45deg,
+    rgba(60, 60, 60, 1) 0%,
+    rgba(140, 140, 140, 1) 50%,
+    rgba(60, 60, 60, 1) 100%
+  );
+  border-radius: 2px;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Vintage Timeline Element Base */
+.vintage-timeline-element {
+  color: #f5f5dc;  /* Off-white text */
+  font-family: var(--font-typewriter, "Tox Typewriter", monospace);
+}
+
+/* DEBUG: Ensure rail containers don't clip absolute children (chords/lyrics)
+   and make those children appear above background overlays */
+.vintage-timeline-element {
+  overflow: visible !important;
+}
+.vintage-timeline-element .absolute,
+.vintage-timeline-element > .absolute,
+.vintage-timeline-element [class*="-translate"] {
+  z-index: 50; /* above base rail but below playhead */
+
+}
+.vintage-timeline-element > * {
+  min-height: 24px;
+}
+
+
+/* Content Dimming Based on Distance from Center */
+.cylindrical-content-overlay {
+  /* Use fixed positioning so overlay is not trapped by ancestor stacking contexts */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Subtle cylindrical dimming on left/right edges */
+  /* Widened and darkened by request: 50% wider fade zones, ~20% darker stops */
+  background: linear-gradient(90deg,
+    rgba(20, 15, 10, 1.0) 0%,        /* darkened */
+    rgba(20, 15, 10, 0.72) 9%,      /* wider start */
+    rgba(20, 15, 10, 0.42) 20%,     /* wider ramp */
+    transparent 40%,
+    transparent 60%,
+    rgba(20, 15, 10, 0.42) 80%,     /* wider ramp */
+    rgba(20, 15, 10, 0.72) 91%,     /* wider end */
+    rgba(20, 15, 10, 1.0) 100%
+  );
+  pointer-events: none;
+  /* Place under the playhead (playhead z-index is 200) */
+  z-index: 150;
+}
+
+/* Subtle vignette to emphasize curved edges */
+.cylindrical-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 160; /* above content overlay but below playhead/footer */
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(0,0,0,0.25) 70%);
+  mix-blend-mode: multiply;
+}
+
+/* Film grain texture - animated to avoid static repetition */
+.cylindrical-filmgrain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 155;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='table' tableValues='0 0.08'/></feComponentTransfer></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.06'/></svg>");
+  background-size: cover;
+  opacity: 0.07;
+  animation: grain-move 8s linear infinite;
+}
+
+@keyframes grain-move {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3%) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Subtle sheen sweep to mimic curved reflection on cylinder */
+.cylindrical-sheen {
+  position: fixed;
+  left: -40%;
+  right: -40%;
+  bottom: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 170; /* just below playhead which is 200 */
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.06) 48%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.06) 52%, rgba(255,255,255,0) 100%);
+  filter: blur(10px) saturate(0.8);
+  /* Controlled by JS: --sheen-x moves the specular highlight when the timeline moves. */
+  transform: translateX(var(--sheen-x, -30%));
+  transition: transform 220ms cubic-bezier(.2,.9,.2,1), opacity 220ms linear;
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cylindrical-filmgrain,
+  .cylindrical-sheen {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Subtle scanlines to add analog feel */
+.cylindrical-scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 165;
+  background-image: linear-gradient(rgba(0,0,0,0.02) 0.5px, transparent 0.5px);
+  background-size: 100% 3px;
+  opacity: 0.6;
+  mix-blend-mode: multiply;
+}
+
+/* Chromatic fringe - very subtle color offsets at edges */
+.cylindrical-chromatic {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 158;
+  background: radial-gradient(ellipse at left center, rgba(255,0,64,0.02) 0%, transparent 12%),
+              radial-gradient(ellipse at right center, rgba(0,160,255,0.02) 0%, transparent 12%);
+  mix-blend-mode: screen;
+  filter: blur(1px) saturate(1.1);
+  opacity: 0.9;
+}
+
+/* Fixed footer that sits above everything to allow the cylendar effect to appear beneath it */
+.timeline-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--footer-height);
+  z-index: 9999; /* intentionally very high so footer remains above timeline and overlays */
+  box-shadow: 0 -6px 18px rgba(0,0,0,0.12);
+}
+
+/* Vintage fader/pot styles for range inputs */
+.fader {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: linear-gradient(90deg, #c8b89e, #efe3cc);
+  border-radius: 6px;
+  outline: none;
+}
+.fader::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff, #e6d6b7);
+  border: 2px solid #a58f70;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.fader::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fff, #e6d6b7);
+  border: 2px solid #a58f70;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+/* Remove small borders on lane containers to avoid seams */
+.vintage-timeline-element {
+  border: none !important;
+}
+
+/* Compact masking tape buttons for shorter text */
+.btn-tape-sm {
+  background-color: #E5D3B3;
+  font-family: var(--font-handwritten, "Sharpie-Regular", cursive);
+  font-weight: 400;
+  font-size: 16px;
+  color: #1a1a1a;
+  border: none;
+  padding: 6px 12px;
+  min-width: 50px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  clip-path: polygon(
+    2% 0%, 98% 0%, 100% 15%, 99% 35%, 100% 55%, 98% 75%, 100% 90%, 97% 100%,
+    3% 100%, 0% 85%, 1% 65%, 0% 45%, 2% 25%, 0% 10%
+  );
+
+  background-image:
+    linear-gradient(90deg, rgba(212, 194, 160, 0.3) 0px, transparent 1px),
+    linear-gradient(0deg, rgba(212, 194, 160, 0.2) 0px, transparent 1px),
+    radial-gradient(circle at 25% 25%, rgba(180, 150, 120, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 75% 75%, rgba(200, 170, 140, 0.08) 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px, 12px 12px, 10px 10px;
+
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Wide masking tape buttons for longer text */
+.btn-tape-wide {
+  background-color: #E5D3B3;
+  font-family: var(--font-handwritten, "Sharpie-Regular", cursive);
+  font-weight: 400;
+  font-size: 18px;
+  color: #1a1a1a;
+  border: none;
+  padding: 8px 20px;
+  min-width: 80px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  clip-path: polygon(
+    2% 0%, 98% 0%, 100% 15%, 99% 35%, 100% 55%, 98% 75%, 100% 90%, 97% 100%,
+    3% 100%, 0% 85%, 1% 65%, 0% 45%, 2% 25%, 0% 10%
+  );
+
+  background-image:
+    linear-gradient(90deg, rgba(212, 194, 160, 0.3) 0px, transparent 1px),
+    linear-gradient(0deg, rgba(212, 194, 160, 0.2) 0px, transparent 1px),
+    radial-gradient(circle at 25% 25%, rgba(180, 150, 120, 0.1) 1px, transparent 1px),
+    radial-gradient(circle at 75% 75%, rgba(200, 170, 140, 0.08) 1px, transparent 1px);
+  background-size: 8px 8px, 8px 8px, 12px 12px, 10px 10px;
+
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
