@@ -95,9 +95,13 @@ function Invoke-EnvFile {
 	param([string]$Path)
 	if (Test-Path $Path) {
 		Write-Host "Loading env vars from $Path" -ForegroundColor DarkGray
-		Get-Content $Path | Where-Object { $_ -match '^[A-Za-z_][A-Za-z0-9_]*=' } | ForEach-Object {
-			$k,$v = $_.Split('=',2); if ($v.StartsWith('"') -and $v.EndsWith('"')) { $v = $v.Trim('"') }
-			$env:$k = $v
+			Get-Content $Path | Where-Object { $_ -match '^[A-Za-z_][A-Za-z0-9_]*=' } | ForEach-Object {
+				$k,$v = $_.Split('=',2)
+				if ($v.StartsWith('"') -and $v.EndsWith('"')) { $v = $v.Trim('"') }
+				# Use Set-Item to avoid invalid dynamic $env: name parsing issues
+				if ($k -and $v -ne $null) {
+					Set-Item -Path Env:$k -Value $v
+				}
 		}
 	}
 }
