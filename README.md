@@ -8,21 +8,21 @@
 
 ## 🏗️ Architecture
 
-```
+```text
 TRK Lab/
 ├── apps/server/          # FastAPI backend server
-│   ├── main.py          # Main application entry point
-│   ├── routes/          # API route handlers
-│   └── tests/           # Backend tests
-├── webapp/app/          # Next.js frontend application
-│   ├── src/             # React components and pages
-│   ├── public/          # Static assets
-│   └── styles/          # CSS and styling
-├── modules/             # Plugin modules (panels, tools, devices)
-├── experiments/         # Audio processing experiments
-├── services/            # Core services (SDK, flow runner, lyrics)
-├── runs/                # Experiment run outputs
-└── scripts/             # Build and utility scripts
+│   ├── main.py           # Main application entry point
+│   ├── routes/           # API route handlers
+│   └── tests/            # Backend tests
+├── webapp/app/           # Next.js frontend application
+│   ├── src/              # React components and pages
+│   ├── public/           # Static assets
+│   └── styles/           # CSS and styling
+├── modules/              # Plugin modules (panels, tools, devices)
+├── experiments/          # Audio processing experiments
+├── services/             # Core services (SDK, flow runner, lyrics)
+├── runs/                 # Experiment run outputs
+└── scripts/              # Build and utility scripts
 ```
 
 ## 🚀 Quick Start
@@ -53,20 +53,22 @@ TRK Lab/
    ```
 
 3. **Open your browser:**
-   - Frontend: http://localhost:3000
-   - API Docs: http://localhost:8000/docs
+   - Frontend: <http://localhost:3000>
+   - API Docs: <http://localhost:8000/docs>
 
 ## 📚 API Documentation
 
 ### Core Endpoints
 
 #### Songs Management
+
 - `GET /songs` - List/search songs
 - `GET /songs/{id}` - Get song details
 - `POST /songs/{id}/tags` - Add tags to song
 - `POST /songs/{id}/attach-lyrics` - Attach lyrics to song
 
 #### Experiments
+
 - `GET /experiments` - List available experiments
 - `POST /experiments/{name}/run` - Execute experiment
 
@@ -114,7 +116,92 @@ npm run build:frontend    # Build frontend
 
 # Deployment
 .\scripts\build.ps1 -Deploy  # Create deployment package
+
 ```
+
+### Live CSS Edit Mode (Design Layer)
+
+An in-browser visual CSS editing system is bundled with the frontend. It lets you click any element, live‑edit common CSS properties, tokenize values into reusable CSS custom properties, undo/redo changes, and export the resulting overrides.
+
+Quick usage:
+
+1. Toggle the edit mode UI (the layout mounts a `CssEditProvider`).
+2. Hover to highlight elements; click to open the inspector panel.
+3. Change properties (background, color, spacing, etc.).
+4. Use `Tokenize` to convert literal values into `:root` level tokens (e.g. `--background-1`).
+5. Edit or delete tokens in the floating Tokens panel (deleting expands usages back to literal values).
+6. `Undo` / `Redo` (stack capped at 15) to traverse history of overrides + token changes.
+7. `Filter` mode restricts clickable targets to those with `data-css-editable` for focused workflows.
+8. `Paste` will parse CSS from your clipboard and merge rules into overrides.
+9. `CSS` / `JSON` buttons copy the full current state (including `:root` token block) to clipboard.
+10. `Reset` clears all overrides and tokens (still undoable unless you prefer hard reset—can be changed).
+
+Exported CSS structure:
+
+```css
+:root {
+   --token-name: value;
+}
+/* Example selector */
+.some-element {
+   prop: value;
+}
+```
+
+Developer notes:
+
+- Provider: `CssEditProvider` wraps the app layout; controls injected `<style id="css-edit-overrides">`.
+- Persistence: localStorage keys `css-edit-overrides` & `css-edit-tokens`.
+- Attribute hinting: Add `data-css-editable` to constrain selection when Filter mode is active.
+- History: Bounded (15). Each mutation (prop change, token update, deletion) records a snapshot.
+
+See `docs/css-edit-mode.md` for full reference & extension guidance.
+
+### Unified Dev Launcher (run_server.ps1)
+
+The PowerShell script `scripts/run_server.ps1` starts backend, frontend, and optional flow loop with consistent environment variable wiring.
+
+Usage examples:
+
+```pwsh
+# Backend + Frontend (default when no flags specified)
+./scripts/run_server.ps1 -All
+
+# Backend only with auto-reload
+./scripts/run_server.ps1 -Backend -Reload
+
+# Custom ports & host
+./scripts/run_server.ps1 -Backend -Frontend -ApiPort 8010 -WebPort 3100 -BindHost 0.0.0.0
+
+# Include flow runner using a profile
+./scripts/run_server.ps1 -Backend -Frontend -Flow -Profile profiles/hello.yaml
+
+# Provide a .env file
+./scripts/run_server.ps1 -All -EnvFile .env
+```
+
+Flags:
+
+- `-Backend` start FastAPI (uvicorn) (`--reload` optional)
+- `-Frontend` start Next.js dev server (`next dev -H <BindHost> -p <WebPort>`)
+- `-Flow` run a persistent loop executing the specified profile
+- `-All` convenience alias for `-Backend -Frontend`
+- `-BindHost` interface (default `127.0.0.1`)
+- `-ApiPort` backend port (default 8000)
+- `-WebPort` frontend port (default 3000)
+- `-Profile` flow profile yaml path
+- `-EnvFile` load environment variables (simple KEY=VALUE lines)
+
+Runtime shortcuts (while running):
+
+- Press `s` to show active processes.
+- Press `q` to quit and gracefully stop all services.
+
+Environment variables exposed to the frontend:
+
+- `NEXT_PUBLIC_API_BASE` → `http://<BindHost>:<ApiPort>`
+
+The flow runner auto-restarts the profile script with a 5s delay after each run.
 
 ### Code Quality
 
@@ -125,6 +212,7 @@ TRK Lab uses comprehensive code quality tools:
 - **Pre-commit hooks**: Automatic quality checks on commit
 
 Run quality checks:
+
 ```bash
 npm run quality
 ```
@@ -147,6 +235,7 @@ npm run test:frontend
 TRK Lab supports a modular plugin architecture:
 
 ### Module Types
+
 - **Panels**: UI components for the web interface
 - **Tools**: Audio processing utilities
 - **Devices**: Hardware integrations
@@ -161,11 +250,13 @@ TRK Lab supports a modular plugin architecture:
 ## 🎵 Audio Processing
 
 ### Supported Formats
+
 - MP3, WAV, FLAC
 - LRC lyrics files
 - MIDI sequences
 
-### Experiments
+### Experiment Types
+
 - **Audio Engine**: Core audio processing pipeline
 - **Lyrics Processing**: Automated lyrics attachment and synchronization
 - **Quality Analysis**: Audio quality metrics and recommendations
