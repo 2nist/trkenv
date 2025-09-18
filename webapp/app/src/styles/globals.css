@@ -118,6 +118,21 @@ body {
   font-family: var(--font-handwritten);
 }
 
+/* Utility: variable-based radius application */
+.radius-var {
+  border-radius: var(--radius-button, var(--radius-base, var(--border-radius, 8px)));
+}
+
+/* CSS Edit Mode highlight */
+.css-edit-hover {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+  cursor: pointer !important;
+}
+.css-edit-panel {
+  font-family: system-ui, sans-serif;
+}
+
 /* Special Elite font utility (used sparingly for headings) */
 .font-special-elite {
   font-family: 'Special Elite', serif;
