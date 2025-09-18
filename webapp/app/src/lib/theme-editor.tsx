@@ -96,6 +96,13 @@ interface Theme {
     rowHeight?: string;  // legacy height
     color: string; // rgba color string for grid lines
   };
+  layout?: {
+    sidebarBg: string;
+    headerBg: string;
+    surfaceBg: string; // generic card / surface background
+    radiusBase?: string; // optional override for --radius-base
+    radiusButton?: string; // optional override for button rounding
+  };
 }
 
 interface ThemeEditorProps {
@@ -123,6 +130,7 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({
     { id: 'borders', label: 'Borders' },
     { id: 'page', label: 'Page' },
     { id: 'grid', label: 'Grid' },
+    { id: 'layout', label: 'Layout' },
     { id: 'advanced', label: 'Advanced' },
     { id: 'themes', label: 'Themes' },
   ];
@@ -585,6 +593,26 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({
     </div>
   );
 
+  const LayoutTab = () => (
+    <div className="space-y-6">
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Layout & Surfaces</h3>
+        <div className="space-y-4">
+          <ColorPicker label="Sidebar BG" value={currentTheme.layout?.sidebarBg || '#f7f7f9'} path="layout.sidebarBg" />
+          <ColorPicker label="Header BG" value={currentTheme.layout?.headerBg || '#ffffff'} path="layout.headerBg" />
+          <ColorPicker label="Surface BG" value={currentTheme.layout?.surfaceBg || '#ffffff'} path="layout.surfaceBg" />
+        </div>
+      </div>
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Rounding</h3>
+        <div className="space-y-4">
+          <RangeSlider label="Base Radius" value={currentTheme.layout?.radiusBase || currentTheme.effects.borderRadius || '8px'} path="layout.radiusBase" min={0} max={48} step={1} unit="px" />
+          <RangeSlider label="Button Radius" value={currentTheme.layout?.radiusButton || currentTheme.effects.borderRadius || '8px'} path="layout.radiusButton" min={0} max={48} step={1} unit="px" />
+        </div>
+      </div>
+    </div>
+  );
+
   const BordersTab = () => (
     <div className="space-y-6">
       {/* Border Controls */}
@@ -776,6 +804,7 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({
   {activeTab === 'advanced' && <AdvancedStylingTab />}
   {activeTab === 'page' && <PageTab />}
   {activeTab === 'grid' && <GridTab />}
+        {activeTab === 'layout' && <LayoutTab />}
         {activeTab === 'themes' && <ThemesTab />}
       </div>
 
@@ -859,6 +888,13 @@ export const ThemeEditor: React.FC<ThemeEditorProps> = ({
                   borderRadius: '8px',
                   shadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                   blur: '10px',
+                },
+                layout: {
+                  sidebarBg: '#f7f7f9',
+                  headerBg: '#ffffff',
+                  surfaceBg: '#ffffff',
+                  radiusBase: '8px',
+                  radiusButton: '8px',
                 },
                 page: {
                   bgColor: '#ffffff',
@@ -1003,6 +1039,13 @@ export const useThemeEditor = () => {
       borderRadius: '8px',
       shadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
       blur: '10px',
+    },
+    layout: {
+      sidebarBg: '#f7f7f9',
+      headerBg: '#ffffff',
+      surfaceBg: '#ffffff',
+      radiusBase: '8px',
+      radiusButton: '8px',
     },
     page: {
       bgColor: '#ffffff',
@@ -1227,4 +1270,14 @@ const applyThemeToCSS = (theme: Theme) => {
   } else if (overlay) {
     overlay.style.display = 'none';
   }
+
+  // Layout specific colors & radii
+  const layout = theme.layout || { sidebarBg: '#f7f7f9', headerBg: '#ffffff', surfaceBg: '#ffffff' };
+  root.style.setProperty('--layout-sidebar-bg', layout.sidebarBg);
+  root.style.setProperty('--layout-header-bg', layout.headerBg);
+  root.style.setProperty('--layout-surface-bg', layout.surfaceBg);
+  if (layout.radiusBase) root.style.setProperty('--radius-base', layout.radiusBase);
+  if (layout.radiusButton) root.style.setProperty('--radius-button', layout.radiusButton);
+  // Provide backwards alias for existing border radius variable
+  if (layout.radiusBase) root.style.setProperty('--border-radius', layout.radiusBase);
 };

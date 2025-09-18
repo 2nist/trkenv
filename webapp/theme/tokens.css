@@ -1,7 +1,255 @@
 @layer tokens {
   :root {
-    --bg:#0e1013; --surface:#141820; --panel:#171c26; --text:#e6e8ee;
-    --accent-9:#3a63ff; --radius-md:10px; --shadow-1:0 1px 2px rgb(0 0 0 / .2);
+    /* ===== COLOR PALETTE ===== */
+
+    /* Primary Colors - Kraft Paper Theme */
+    --color-primary-50: #fdf9f3;
+    --color-primary-100: #f8f0e1;
+    --color-primary-200: #f0ddc3;
+    --color-primary-300: #e5c89e;
+    --color-primary-400: #d4ad79;
+    --color-primary-500: #c09254;  /* Main kraft color */
+    --color-primary-600: #a07845;
+    --color-primary-700: #805e37;
+    --color-primary-800: #65492d;
+    --color-primary-900: #523a25;
+    --color-primary-950: #2d1f15;
+
+    /* Neutral Colors - Paper & Ink */
+    --color-neutral-50: #fafaf9;
+    --color-neutral-100: #f5f5f4;
+    --color-neutral-200: #e7e5e4;
+    --color-neutral-300: #d6d3d1;
+    --color-neutral-400: #a8a29e;
+    --color-neutral-500: #78716c;
+    --color-neutral-600: #57534e;
+    --color-neutral-700: #44403c;
+    --color-neutral-800: #292524;
+    --color-neutral-900: #1c1917;
+    --color-neutral-950: #0c0a09;
+
+    /* Semantic Colors */
+    --color-success: #16a34a;
+    --color-warning: #ca8a04;
+    --color-error: #dc2626;
+    --color-info: #2563eb;
+
+    /* Background Colors */
+    --color-bg-primary: #dcc299;    /* Main kraft background */
+    --color-bg-secondary: #f5f5dc;  /* Off-white paper */
+    --color-bg-tertiary: #e7e5e4;   /* Light gray */
+    --color-bg-overlay: rgba(20, 15, 10, 0.95);
+
+    /* Text Colors */
+    --color-text-primary: #1c1917;    /* Dark charcoal */
+    --color-text-secondary: #57534e;  /* Medium gray */
+    --color-text-tertiary: #a8a29e;   /* Light gray */
+    --color-text-inverse: #fafaf9;    /* Off-white */
+
+    /* Border Colors */
+    --color-border-light: rgba(255, 255, 255, 0.2);
+    --color-border-medium: rgba(0, 0, 0, 0.15);
+    --color-border-dark: rgba(0, 0, 0, 0.3);
+
+    /* Border Controls */
+    --border-show: none;           /* Show/hide borders: 'block' or 'none' */
+    --border-width: 1px;           /* Border width */
+    --border-style: solid;         /* Border style: solid, dashed, dotted */
+
+    /* ===== TYPOGRAPHY ===== */
+
+    /* Font Families */
+    --font-family-sans: 'Inter', system-ui, sans-serif;
+    --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --font-family-handwritten: 'Sharpie-Regular', 'Kalam', cursive;
+    --font-family-typewriter: 'Tox Typewriter', 'Courier New', monospace;
+    --font-family-dymo: 'Dymo', 'Impact', sans-serif;
+
+    /* Dymo Font Customizations */
+    --font-size-dymo-base: 2rem;        /* Twice as big as normal base (1rem) */
+    --font-size-dymo-lg: 2.5rem;        /* Twice as big as normal lg (1.25rem) */
+    --font-size-dymo-xl: 3rem;          /* Twice as big as normal xl (1.5rem) */
+    --font-size-dymo-2xl: 4rem;         /* Twice as big as normal 2xl (2rem) */
+    --letter-spacing-dymo: -0.08em;     /* Tighter spacing to connect letters */
+    --color-dymo: #1c1917;              /* Dymo text color */
+
+    /* Font Sizes */
+    --font-size-xs: 0.75rem;    /* 12px */
+    --font-size-sm: 0.875rem;   /* 14px */
+    --font-size-base: 1rem;     /* 16px */
+    --font-size-lg: 1.125rem;   /* 18px */
+    --font-size-xl: 1.25rem;    /* 20px */
+    --font-size-2xl: 1.5rem;    /* 24px */
+    --font-size-3xl: 1.875rem;  /* 30px */
+    --font-size-4xl: 2.25rem;   /* 36px */
+
+    /* Font Weights */
+    --font-weight-thin: 100;
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+    --font-weight-black: 900;
+
+    /* Line Heights */
+    --line-height-tight: 1.25;
+    --line-height-snug: 1.375;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 2;
+
+    /* Letter Spacing */
+    --letter-spacing-tighter: -0.05em;
+    --letter-spacing-tight: -0.025em;
+    --letter-spacing-normal: 0em;
+    --letter-spacing-wide: 0.025em;
+    --letter-spacing-wider: 0.05em;
+    --letter-spacing-widest: 0.1em;
+
+    /* ===== SPACING ===== */
+
+    /* Spacing Scale */
+    --spacing-0: 0;
+    --spacing-px: 1px;
+    --spacing-0_5: 0.125rem;   /* 2px */
+    --spacing-1: 0.25rem;      /* 4px */
+    --spacing-1_5: 0.375rem;   /* 6px */
+    --spacing-2: 0.5rem;       /* 8px */
+    --spacing-2_5: 0.625rem;   /* 10px */
+    --spacing-3: 0.75rem;      /* 12px */
+    --spacing-3_5: 0.875rem;   /* 14px */
+    --spacing-4: 1rem;         /* 16px */
+    --spacing-5: 1.25rem;      /* 20px */
+    --spacing-6: 1.5rem;       /* 24px */
+    --spacing-7: 1.75rem;      /* 28px */
+    --spacing-8: 2rem;         /* 32px */
+    --spacing-9: 2.25rem;      /* 36px */
+    --spacing-10: 2.5rem;      /* 40px */
+    --spacing-11: 2.75rem;     /* 44px */
+    --spacing-12: 3rem;        /* 48px */
+    --spacing-14: 3.5rem;      /* 56px */
+    --spacing-16: 4rem;        /* 64px */
+    --spacing-20: 5rem;        /* 80px */
+    --spacing-24: 6rem;        /* 96px */
+    --spacing-28: 7rem;        /* 112px */
+    --spacing-32: 8rem;        /* 128px */
+    --spacing-36: 9rem;        /* 144px */
+    --spacing-40: 10rem;       /* 160px */
+    --spacing-44: 11rem;       /* 176px */
+    --spacing-48: 12rem;       /* 192px */
+    --spacing-52: 13rem;       /* 208px */
+    --spacing-56: 14rem;       /* 224px */
+    --spacing-60: 15rem;       /* 240px */
+    --spacing-64: 16rem;       /* 256px */
+    --spacing-72: 18rem;       /* 288px */
+    --spacing-80: 20rem;       /* 320px */
+    --spacing-96: 24rem;       /* 384px */
+
+    /* ===== BORDERS ===== */
+
+    /* Border Radius */
+    --border-radius-none: 0;
+    --border-radius-sm: 0.125rem;   /* 2px */
+    --border-radius: 0.25rem;       /* 4px */
+    --border-radius-md: 0.375rem;   /* 6px */
+    --border-radius-lg: 0.5rem;     /* 8px */
+    --border-radius-xl: 0.75rem;    /* 12px */
+    --border-radius-2xl: 1rem;      /* 16px */
+    --border-radius-3xl: 1.5rem;    /* 24px */
+    --border-radius-full: 9999px;
+
+    /* Border Width */
+    --border-width-0: 0;
+    --border-width-1: 1px;
+    --border-width-2: 2px;
+    --border-width-4: 4px;
+    --border-width-8: 8px;
+
+    /* ===== SHADOWS ===== */
+
+    /* Box Shadows */
+    --shadow-none: 0 0 #0000;
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+    /* ===== COMPONENT TOKENS ===== */
+
+    /* Button Tokens */
+    --button-height-sm: 2rem;      /* 32px */
+    --button-height-md: 2.5rem;    /* 40px */
+    --button-height-lg: 3rem;      /* 48px */
+
+    --button-padding-x-sm: 0.75rem;  /* 12px */
+    --button-padding-x-md: 1rem;     /* 16px */
+    --button-padding-x-lg: 1.5rem;   /* 24px */
+
+    --button-font-size-sm: var(--font-size-sm);
+    --button-font-size-md: var(--font-size-base);
+    --button-font-size-lg: var(--font-size-lg);
+
+    /* Input Tokens */
+    --input-height: 2.5rem;        /* 40px */
+    --input-padding-x: 0.75rem;    /* 12px */
+    --input-border-width: 1px;
+    --input-border-radius: var(--border-radius);
+
+    /* Card Tokens */
+    --card-padding: 1rem;          /* 16px */
+    --card-border-radius: var(--border-radius-lg);
+    --card-shadow: var(--shadow);
+
+    /* ===== LEGACY TOKENS (for backward compatibility) ===== */
+    --bg: var(--color-bg-primary);
+    --surface: var(--color-bg-secondary);
+    --panel: var(--color-bg-tertiary);
+    --text: var(--color-text-primary);
+    --accent-9: var(--color-primary-600);
+    --radius-md: var(--border-radius-md);
+    --shadow-1: var(--shadow-sm);
+
+    /* Legacy spacing (backward compatibility) */
+    --spacing-xs: var(--spacing-2);
+    --spacing-sm: var(--spacing-3);
+    --spacing-md: var(--spacing-4);
+    --spacing-lg: var(--spacing-6);
+
+    /* Legacy colors (backward compatibility) */
+    --primary: var(--color-primary-500);
+    --secondary: var(--color-primary-600);
+    --muted: var(--color-neutral-500);
+    --border: var(--color-border-medium);
+
+    /* Legacy border radius (backward compatibility) */
+    --radius-sm: var(--border-radius-sm);
+    --radius: var(--border-radius);
+    --radius-lg: var(--border-radius-lg);
+
+    /* Legacy shadows (backward compatibility) */
+    --shadow-sm: var(--shadow-sm);
+    --shadow: var(--shadow);
+    --shadow-lg: var(--shadow-lg);
+
+    /* Legacy fonts (backward compatibility) */
+    --font-sans: var(--font-family-sans);
+    --font-mono: var(--font-family-mono);
+    --font-handwritten: var(--font-family-handwritten);
+    --font-typewriter: var(--font-family-typewriter);
+    --font-dymo: var(--font-family-dymo);
   }
 }
-@layer skin.glass {}
+
+@layer skin.glass {
+  [data-skin="glass"] .panel {
+    background: var(--color-bg-tertiary);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+}
