@@ -144,7 +144,8 @@ body {
 
 /* DYMO Label Styles */
 .dymo-tab {
-  font-family: var(--font-dymo, "Dymo", sans-serif);
+  /* Use Sharpie for label styling */
+  font-family: var(--font-handwritten, "Sharpie-Regular", cursive);
   font-size: 42px;
   font-weight: normal;
   text-transform: uppercase;
@@ -185,7 +186,8 @@ body {
 }
 
 .font-dymo {
-  font-family: var(--font-dymo, "Dymo", sans-serif);
+  /* Map legacy dymo utility to Sharpie for now */
+  font-family: var(--font-handwritten, "Sharpie-Regular", cursive);
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -203,8 +205,8 @@ p, div, span, input, textarea, label, li {
 
 /* Headings use typewriter but slightly larger */
 h1, h2, h3, h4, h5, h6 {
-  /* Use Dymo for headers per request */
-  font-family: var(--font-dymo);
+  /* Switch headers to Sharpie (handwritten) */
+  font-family: var(--font-handwritten);
   color: #000000;
   letter-spacing: 0.05em;
   line-height: 1.4;
@@ -233,7 +235,7 @@ h4, h5, h6 { font-size: 14px; }
 }
 
 .card {
-  @apply rounded-lg shadow p-4 border border-border;
+  @apply rounded-lg shadow p-4 border;
   background-color: color-mix(in oklab, var(--bg) 90%, transparent);
 }
 
@@ -468,6 +470,15 @@ h4, h5, h6 { font-size: 14px; }
     rgba(40, 40, 40, 0.9) 0%,
     rgba(80, 80, 80, 1) 10%,
     rgba(120, 120, 120, 1) 50%,
+    rgba(80, 80, 80, 1) 90%,
+    rgba(40, 40, 40, 0.9) 100%
+  );
+
+  box-shadow:
+    0 0 6px rgba(120, 120, 120, 0.6),
+    0 0 12px rgba(180, 60, 40, 0.3),
+    inset 0 0 2px rgba(255, 255, 255, 0.3);
+}
 
 /* CSS variable driven layout helpers */
 .var-left { left: var(--left, 0px); }
@@ -486,15 +497,6 @@ h4, h5, h6 { font-size: 14px; }
 .ruler-label-left { left: var(--left, 2px); }
 .ruler-label-top { top: var(--top, 1px); }
 .ruler-label-offset { transform: translateX(var(--left-offset, 2px)); }
-    rgba(80, 80, 80, 1) 90%,
-    rgba(40, 40, 40, 0.9) 100%
-  );
-
-  box-shadow:
-    0 0 6px rgba(120, 120, 120, 0.6),
-    0 0 12px rgba(180, 60, 40, 0.3),
-    inset 0 0 2px rgba(255, 255, 255, 0.3);
-}
 
 /* Playhead mechanical details */
 .cylindrical-playhead::before {
