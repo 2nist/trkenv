@@ -16,19 +16,33 @@ interface CssEditContextValue {
   exportJson(): string;
   renameSelector(oldSel: string, newSel: string): void;
   resetAll(): void;
+  // new features
+  undo(): void;
+  redo(): void;
+  canUndo: boolean;
+  canRedo: boolean;
+  pasteCss(css: string): void;
+  filterMode: boolean;
+  toggleFilterMode(): void;
+  tokens: Record<string,string>;
+  tokenize(items: { selector: string; prop: string; token: string }[]): void;
+  deleteToken(name: string): void;
+  updateToken(name: string, value: string): void;
 }
 
 const CssEditContext = createContext<CssEditContextValue | undefined>(undefined);
 
 const STORAGE_KEY = 'css-edit-overrides';
+const TOKENS_KEY = 'css-edit-tokens';
+const HISTORY_LIMIT = 15;
 
 // ============ Utilities ============
 function loadOverrides(): Record<string, CssOverride> {
   try { const raw = localStorage.getItem(STORAGE_KEY); if (!raw) return {}; return JSON.parse(raw); } catch { return {}; }
 }
-function saveOverrides(data: Record<string, CssOverride>) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
-}
+function saveOverrides(data: Record<string, CssOverride>) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {} }
+function loadTokens(): Record<string,string> { try { const raw = localStorage.getItem(TOKENS_KEY); if (!raw) return {}; return JSON.parse(raw);} catch { return {}; } }
+function saveTokens(tokens: Record<string,string>) { try { localStorage.setItem(TOKENS_KEY, JSON.stringify(tokens)); } catch {} }
 
 function getBestSelector(el: HTMLElement): string {
   if (el.dataset.cssId) return `[data-css-id="${el.dataset.cssId}"]`;
@@ -45,24 +59,32 @@ function getBestSelector(el: HTMLElement): string {
   return parts.join(' > ');
 }
 
-function buildCss(overrides: Record<string, CssOverride>): string {
-  return Object.values(overrides).map(o => {
+function buildCss(overrides: Record<string, CssOverride>, tokens?: Record<string,string>): string {
+  const tokenBlock = tokens && Object.keys(tokens).length
+    ? `:root{\n${Object.entries(tokens).map(([k,v])=>`  --${k}: ${v};`).join('\n')}\n}\n\n`
+    : '';
+  const rules = Object.values(overrides).map(o => {
     const body = Object.entries(o.props).map(([k,v]) => `  ${k}: ${v};`).join('\n');
     return `${o.selector} {\n${body}\n}`;
   }).join('\n\n');
+  return tokenBlock + rules;
 }
 
 // ============ Provider ============
 export const CssEditProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [enabled, setEnabled] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, CssOverride>>({});
+  const [tokens, setTokens] = useState<Record<string,string>>({});
+  const [filterMode, setFilterMode] = useState(false);
+  const historyRef = useRef<{ overrides: Record<string,CssOverride>; tokens: Record<string,string> }[]>([]);
+  const futureRef = useRef<{ overrides: Record<string,CssOverride>; tokens: Record<string,string> }[]>([]);
   const [selectedEl, setSelectedEl] = useState<HTMLElement | null>(null);
   const [selectedSelector, setSelectedSelector] = useState<string | undefined>();
   const styleRef = useRef<HTMLStyleElement | null>(null);
   const hoverRef = useRef<HTMLElement | null>(null);
 
   // load overrides on mount
-  useEffect(() => { setOverrides(loadOverrides()); }, []);
+  useEffect(() => { setOverrides(loadOverrides()); setTokens(loadTokens()); }, []);
 
   // inject style tag
   useEffect(() => {
@@ -72,9 +94,23 @@ export const CssEditProvider: React.FC<{ children: React.ReactNode }> = ({ child
       document.head.appendChild(st);
       styleRef.current = st;
     }
-    styleRef.current!.textContent = buildCss(overrides);
-    saveOverrides(overrides);
-  }, [overrides]);
+    styleRef.current!.textContent = buildCss(overrides, tokens);
+    saveOverrides(overrides); saveTokens(tokens);
+  }, [overrides, tokens]);
+
+  function pushHistory(snapshot?: { overrides: Record<string,CssOverride>; tokens: Record<string,string> }) {
+    const snap = snapshot || { overrides: structuredClone(overrides), tokens: structuredClone(tokens) };
+    historyRef.current.push(snap);
+    if (historyRef.current.length > HISTORY_LIMIT) historyRef.current.shift();
+    futureRef.current = [];
+  }
+
+  // seed history after initial load
+  useEffect(() => {
+    if (historyRef.current.length === 0 && (Object.keys(overrides).length || Object.keys(tokens).length)) {
+      pushHistory();
+    }
+  }, [overrides, tokens]);
 
   // listeners when enabled
   useEffect(() => {
@@ -85,6 +121,7 @@ export const CssEditProvider: React.FC<{ children: React.ReactNode }> = ({ child
     function onMove(e: MouseEvent) {
       const target = e.target as HTMLElement;
       if (!target || target.closest('.css-edit-panel')) return;
+      if (filterMode && !target.closest('[data-css-editable]') && !target.hasAttribute('data-css-editable')) return;
       if (hoverRef.current && hoverRef.current !== target) hoverRef.current.classList.remove('css-edit-hover');
       hoverRef.current = target;
       hoverRef.current.classList.add('css-edit-hover');
@@ -92,11 +129,13 @@ export const CssEditProvider: React.FC<{ children: React.ReactNode }> = ({ child
     function onClick(e: MouseEvent) {
       const target = e.target as HTMLElement;
       if (!target || target.closest('.css-edit-panel')) return;
+      if (filterMode && !target.closest('[data-css-editable]') && !target.hasAttribute('data-css-editable')) return;
       e.preventDefault(); e.stopPropagation();
       const sel = getBestSelector(target);
       setSelectedEl(target);
       setSelectedSelector(sel);
       if (!overrides[sel]) {
+        pushHistory();
         setOverrides(prev => ({ ...prev, [sel]: { selector: sel, props: {} } }));
       }
     }
@@ -107,15 +146,17 @@ export const CssEditProvider: React.FC<{ children: React.ReactNode }> = ({ child
       document.removeEventListener('click', onClick, true);
       if (hoverRef.current) hoverRef.current.classList.remove('css-edit-hover');
     };
-  }, [enabled, overrides]);
+  }, [enabled, overrides, filterMode]);
 
   const updateProp = (selector: string, prop: string, value: string) => {
+    pushHistory();
     setOverrides(prev => {
       const cur = prev[selector] || { selector, props: {} };
       return { ...prev, [selector]: { ...cur, props: { ...cur.props, [prop]: value } } };
     });
   };
   const removeProp = (selector: string, prop: string) => {
+    pushHistory();
     setOverrides(prev => {
       const cur = prev[selector]; if (!cur) return prev;
       const newProps = { ...cur.props }; delete newProps[prop];
@@ -123,19 +164,22 @@ export const CssEditProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
   const setSelectorLabel = (selector: string, label: string) => {
+    pushHistory();
     setOverrides(prev => {
       const cur = prev[selector]; if (!cur) return prev;
       return { ...prev, [selector]: { ...cur, label } };
     });
   };
   const clearSelector = (selector: string) => {
+    pushHistory();
     setOverrides(prev => { const n = { ...prev }; delete n[selector]; return n; });
     if (selectedSelector === selector) { setSelectedSelector(undefined); setSelectedEl(null); }
   };
-  const exportCss = () => buildCss(overrides);
-  const exportJson = () => JSON.stringify(overrides, null, 2);
+  const exportCss = () => buildCss(overrides, tokens);
+  const exportJson = () => JSON.stringify({ overrides, tokens }, null, 2);
   const renameSelector = (oldSel: string, newSel: string) => {
     if (!oldSel || !newSel || oldSel === newSel) return;
+    pushHistory();
     setOverrides(prev => {
       const copy = { ...prev };
       const existing = copy[oldSel]; if (!existing) return prev;
@@ -149,18 +193,97 @@ export const CssEditProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
   const resetAll = () => {
     if (confirm('Reset ALL CSS overrides? This cannot be undone.')) {
-      setOverrides({});
+      pushHistory();
+      setOverrides({}); setTokens({});
       setSelectedEl(null); setSelectedSelector(undefined);
     }
+  };
+  const undo = () => {
+    if (!historyRef.current.length) return;
+    const last = historyRef.current.pop()!;
+    futureRef.current.push({ overrides: structuredClone(overrides), tokens: structuredClone(tokens) });
+    setOverrides(last.overrides); setTokens(last.tokens);
+  };
+  const redo = () => {
+    if (!futureRef.current.length) return;
+    const next = futureRef.current.pop()!;
+    historyRef.current.push({ overrides: structuredClone(overrides), tokens: structuredClone(tokens) });
+    setOverrides(next.overrides); setTokens(next.tokens);
+  };
+  const canUndo = historyRef.current.length > 0;
+  const canRedo = futureRef.current.length > 0;
+
+  const pasteCss = (css: string) => {
+    if (!css) return;
+    pushHistory();
+    const blocks = css.split('}');
+    const additions: Record<string,CssOverride> = {};
+    blocks.forEach(b => {
+      const seg = b.trim(); if (!seg) return;
+      const i = seg.indexOf('{'); if (i === -1) return;
+      const sel = seg.slice(0,i).trim();
+      const body = seg.slice(i+1).trim(); if (!sel || !body) return;
+      const props: Record<string,string> = {};
+      body.split(';').forEach(line => {
+        const ln = line.trim(); if (!ln) return;
+        const ci = ln.indexOf(':'); if (ci === -1) return;
+        const k = ln.slice(0,ci).trim(); const v = ln.slice(ci+1).trim(); if (k) props[k] = v;
+      });
+      if (Object.keys(props).length) {
+        additions[sel] = { selector: sel, props: { ...(overrides[sel]?.props||{}), ...props } };
+      }
+    });
+    setOverrides(prev => ({ ...prev, ...additions }));
+  };
+
+  const toggleFilterMode = () => setFilterMode(f=>!f);
+
+  const tokenize = (items: { selector: string; prop: string; token: string }[]) => {
+    if (!items.length) return;
+    pushHistory();
+    setOverrides(prev => {
+      const copy = { ...prev };
+      const newTokens: Record<string,string> = {};
+      items.forEach(it => {
+        const ov = copy[it.selector]; if (!ov) return;
+        const val = ov.props[it.prop]; if (!val) return;
+        const name = it.token.replace(/^--/, '');
+        newTokens[name] = val;
+        ov.props[it.prop] = `var(--${name})`;
+      });
+      setTokens(tk => ({ ...tk, ...newTokens }));
+      return copy;
+    });
+  };
+  const deleteToken = (name: string) => {
+    if (!tokens[name]) return;
+    pushHistory();
+    const varRef = `var(--${name})`; const val = tokens[name];
+    setOverrides(prev => {
+      const c: typeof prev = {};
+      Object.entries(prev).forEach(([sel,ov]) => {
+        const newProps: Record<string,string> = {};
+        Object.entries(ov.props).forEach(([k,v]) => { newProps[k] = v === varRef ? val : v; });
+        c[sel] = { ...ov, props: newProps };
+      });
+      return c;
+    });
+    setTokens(tk => { const n={...tk}; delete n[name]; return n; });
+  };
+  const updateToken = (name: string, value: string) => {
+    if (!tokens[name]) return;
+    pushHistory();
+    setTokens(tk => ({ ...tk, [name]: value }));
   };
   const toggle = () => setEnabled(e => !e);
 
   return (
-    <CssEditContext.Provider value={{ enabled, toggle, selectedEl, selectedSelector, overrides, updateProp, removeProp, setSelectorLabel, clearSelector, exportCss, exportJson, renameSelector, resetAll }}>
+    <CssEditContext.Provider value={{ enabled, toggle, selectedEl, selectedSelector, overrides, updateProp, removeProp, setSelectorLabel, clearSelector, exportCss, exportJson, renameSelector, resetAll, undo, redo, canUndo, canRedo, pasteCss, filterMode, toggleFilterMode, tokens, tokenize, deleteToken, updateToken }}>
       {children}
       {enabled && selectedEl && selectedSelector && (
         <CssInspector selector={selectedSelector} element={selectedEl} />
       )}
+      {enabled && Object.keys(tokens).length > 0 && <TokensPanel />}
     </CssEditContext.Provider>
   );
 };
@@ -186,7 +309,7 @@ const COMMON_PROPS: { key: string; label: string; type?: 'color' | 'text' }[] = 
 ];
 
 const CssInspector: React.FC<{ selector: string; element: HTMLElement }> = ({ selector, element }) => {
-  const { overrides, updateProp, removeProp, clearSelector, setSelectorLabel, exportCss, exportJson, renameSelector, resetAll } = useCssEdit();
+  const { overrides, updateProp, removeProp, clearSelector, setSelectorLabel, exportCss, exportJson, renameSelector, resetAll, undo, redo, canUndo, canRedo, pasteCss, filterMode, toggleFilterMode, tokens, tokenize } = useCssEdit();
   const ov = overrides[selector];
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -255,18 +378,27 @@ const CssInspector: React.FC<{ selector: string; element: HTMLElement }> = ({ se
         <input className="flex-1 border border-gray-300 rounded px-1 py-0.5" placeholder="value" value={customValue} onChange={e=>setCustomValue(e.target.value)} />
         <button className="px-2 border border-gray-300 rounded bg-gray-50" onClick={() => { if (customProp && customValue) { updateProp(selector, customProp, customValue); setCustomProp(''); setCustomValue(''); } }}>Add</button>
       </div>
-      <div className="flex flex-wrap gap-2 items-center justify-between">
+      <div className="flex flex-wrap gap-2 items-center">
         <button className="text-blue-600 hover:underline" onClick={() => setShowAll(s=>!s)}>{showAll ? 'Hide Others' : 'Show All'}</button>
-        <div className="flex gap-2 ml-auto">
-          <button className="text-gray-600 hover:underline" onClick={() => { const css = exportCss(); navigator.clipboard?.writeText(css).catch(()=>{}); }}>CSS</button>
-          <button className="text-gray-600 hover:underline" onClick={() => { const json = exportJson(); navigator.clipboard?.writeText(json).catch(()=>{}); }}>JSON</button>
-          <button className="text-red-500 hover:underline" onClick={() => resetAll()}>Reset</button>
-        </div>
+        <button disabled={!canUndo} className={`text-gray-600 ${!canUndo?'opacity-40':''}`} onClick={undo}>Undo</button>
+        <button disabled={!canRedo} className={`text-gray-600 ${!canRedo?'opacity-40':''}`} onClick={redo}>Redo</button>
+        <button className={`text-gray-600 ${filterMode?'underline':''}`} onClick={toggleFilterMode}>Filter</button>
+        <button className="text-gray-600" onClick={async()=>{ try { const txt = await navigator.clipboard.readText(); pasteCss(txt); } catch {} }}>Paste</button>
+        <button className="text-gray-600" onClick={() => { const css = exportCss(); navigator.clipboard?.writeText(css).catch(()=>{}); }}>CSS</button>
+        <button className="text-gray-600" onClick={() => { const json = exportJson(); navigator.clipboard?.writeText(json).catch(()=>{}); }}>JSON</button>
+        <button className="text-gray-600" onClick={() => {
+          const items = COMMON_PROPS.map(p=>p.key).filter(k=>overrides[selector].props[k]).map((k,i)=>({ selector, prop:k, token:`${k}-${i+1}` }));
+          const uniq: { selector:string; prop:string; token:string }[] = [];
+          const seen = new Set<string>();
+          items.forEach(it => { if(!seen.has(it.token)){ uniq.push(it); seen.add(it.token);} });
+          tokenize(uniq);
+        }}>Tokenize</button>
+        <button className="text-red-500" onClick={() => resetAll()}>Reset</button>
       </div>
       <div className="flex items-center gap-2">
         <input className="flex-1 border border-gray-300 rounded px-1 py-0.5" placeholder="Label" value={ov.label || ''} onChange={e=>setSelectorLabel(selector, e.target.value)} />
       </div>
-      <p className="text-[10px] text-gray-500 leading-snug">Edit Mode: Click other elements to switch. Hover highlights. Overrides persist locally.</p>
+      <p className="text-[10px] text-gray-500 leading-snug">Edit Mode: Click elements to edit. Filter restricts to data-css-editable. Tokenize converts values to :root tokens.</p>
     </div>
   );
 };
@@ -292,6 +424,24 @@ const PropRow: React.FC<{ propKey: string; label: string; value?: string; onChan
         if (resp !== null) onChange(resp);
       }}>…</button>}
       {value && <button onClick={onRemove} className="text-red-500">×</button>}
+    </div>
+  );
+};
+
+const TokensPanel: React.FC = () => {
+  const { tokens, deleteToken, updateToken } = useCssEdit();
+  const names = Object.keys(tokens);
+  if (!names.length) return null;
+  return (
+    <div className="css-edit-panel fixed bottom-2 right-2 z-[9998] w-64 max-h-60 overflow-y-auto bg-white border border-gray-300 shadow rounded-md p-2 text-[11px] space-y-2">
+      <div className="flex items-center justify-between"><strong className="text-xs">Tokens</strong></div>
+      {names.map(n => (
+        <div key={n} className="flex items-center gap-1">
+          <span className="flex-none text-gray-600 truncate" title={n}>--{n}</span>
+            <input className="flex-1 border border-gray-300 rounded px-1 py-0.5" value={tokens[n]} onChange={e=>updateToken(n, e.target.value)} aria-label={`Token ${n} value`} title={`Token ${n} value`} placeholder="value" />
+          <button className="text-red-500" onClick={()=>deleteToken(n)}>×</button>
+        </div>
+      ))}
     </div>
   );
 };
