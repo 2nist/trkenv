@@ -1,13 +1,85 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "Web: dev",
-			"type": "shell",
-			"command": "npm run dev",
-			"args": [],
-			"isBackground": false,
-			"group": "build"
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Web: dev",
+      "type": "shell",
+      "command": "npm run dev",
+      "args": [],
+      "isBackground": true,
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Web: build",
+      "type": "shell",
+      "command": "npm run build",
+      "args": [],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Web: lint",
+      "type": "shell",
+      "command": "npm run lint",
+      "args": [],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Web: lint:fix",
+      "type": "shell",
+      "command": "npm run lint:fix",
+      "args": [],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Web: format",
+      "type": "shell",
+      "command": "npm run format",
+      "args": [],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Web: type-check",
+      "type": "shell",
+      "command": "npm run type-check",
+      "args": [],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    }
+  ]
 }

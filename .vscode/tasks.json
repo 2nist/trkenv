@@ -1,35 +1,51 @@
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "backend: uvicorn",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoExit",
-        "-Command",
-        "cd ${workspaceFolder}/apps/server; if (Test-Path .venv) { . .\\.venv\\Scripts\\Activate.ps1 }; python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload"
-      ],
-      "presentation": { "panel": "new", "reveal": "always" },
-      "problemMatcher": []
-    },
-    {
-      "label": "frontend: next dev",
-      "type": "shell",
-      "command": "pwsh",
-      "args": [
-        "-NoExit",
-        "-Command",
-        "cd ${workspaceFolder}/webapp/host/app; npm run dev"
-      ],
-      "presentation": { "panel": "new", "reveal": "always" },
-      "problemMatcher": []
-    },
-    {
-      "label": "dev: all",
-      "dependsOn": ["backend: uvicorn", "frontend: next dev"],
-      "dependsOrder": "parallel",
-      "problemMatcher": []
-    }
-  ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "backend: uvicorn",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoExit",
+				"-Command",
+				"cd ${workspaceFolder}/apps/server; if (Test-Path .venv) { . .\\.venv\\Scripts\\Activate.ps1 }; python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload"
+			],
+			"presentation": {
+				"panel": "new",
+				"reveal": "always"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "frontend: next dev",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoExit",
+				"-Command",
+				"cd ${workspaceFolder}/webapp/host/app; npm run dev"
+			],
+			"presentation": {
+				"panel": "new",
+				"reveal": "always"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "dev: all",
+			"dependsOn": [
+				"backend: uvicorn",
+				"frontend: next dev"
+			],
+			"dependsOrder": "parallel",
+			"problemMatcher": []
+		},
+		{
+			"label": "dev:webapp",
+			"type": "shell",
+			"command": "pwsh -NoProfile -Command \"cd C:\\Users\\CraftAuto-Sales\\trk\\webapp\\app; npm run dev\"",
+			"isBackground": true,
+			"group": "build"
+		}
+	]
 }

@@ -6,8 +6,7 @@ import { useRouter } from "next/router";
 import localFont from "next/font/local";
 import "../src/styles/globals.css";
 import { ThemeSwitcher } from '../src/ui/theme-switcher';
-import TopNav from '../src/components/nav/TopNav';
-import SideNav from '../src/components/nav/SideNav';
+import { AppLayout, useAppLayout } from '../src/components/AppLayout';
 
 // Sharpie handwritten style for header tabs and buttons
 const handwritten = localFont({
@@ -34,6 +33,7 @@ const dymo = localFont({
 
 export default function App({ Component, pageProps }: AppProps) {
   const [themes, setThemes] = React.useState<string[]>([]);
+  const appLayout = useAppLayout();
 
   React.useEffect(() => {
     // Dynamically import the ESM theme API (served from /theme/theme-api.mjs)
@@ -73,22 +73,58 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <div className={`min-h-screen bg-white text-gray-900 ${handwritten.variable} ${typewriter.variable} ${dymo.variable}`}>
-      <TopNav>
-        <ThemeSwitcher themes={themes} onSet={(t) => {
-          if (typeof (window as any).trkSetTheme === 'function') (window as any).trkSetTheme(t);
-          else {
-            // try dynamic import fallback
-                        import(window.location.origin + '/theme/theme-api.mjs').then((m: any) => m.trkSetTheme && m.trkSetTheme(t)).catch(()=>{});
-          }
-        }} />
-      </TopNav>
+      {/* Top Navigation Bar */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-gray-900 font-dymo">TRK Lab</h1>
+            <nav className="hidden md:flex items-center gap-6">
+              <Link href="/" className="text-gray-600 hover:text-gray-900 transition-colors">
+                Home
+              </Link>
+              <Link href="/design" className="text-gray-600 hover:text-gray-900 transition-colors">
+                Design
+              </Link>
+              <Link href="/songs" className="text-gray-600 hover:text-gray-900 transition-colors">
+                Songs
+              </Link>
+            </nav>
+          </div>
 
-      <div className="flex min-h-[calc(100vh-4rem)]">
-        <SideNav />
-        <main className="flex-1 bg-gray-50 p-6 overflow-auto">
-          <Component {...pageProps} />
-        </main>
+          <div className="flex items-center gap-4">
+            {/* Theme Editor Toggle Button */}
+            <button
+              onClick={appLayout.toggleThemeEditor}
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                appLayout.showThemeEditor
+                  ? 'bg-blue-500 text-white hover:bg-blue-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+              }`}
+              title={appLayout.showThemeEditor ? 'Show Navigation' : 'Show Theme Editor'}
+            >
+              {appLayout.showThemeEditor ? 'Navigation' : 'Theme Editor'}
+            </button>
+
+            <ThemeSwitcher themes={themes} onSet={(t) => {
+              if (typeof (window as any).trkSetTheme === 'function') (window as any).trkSetTheme(t);
+              else {
+                // try dynamic import fallback
+                        import(window.location.origin + '/theme/theme-api.mjs').then((m: any) => m.trkSetTheme && m.trkSetTheme(t)).catch(()=>{});
+              }
+            }} />
+          </div>
+        </div>
       </div>
+
+      {/* Main App Layout with Theme Editor Sidebar */}
+      <AppLayout
+        showThemeEditor={appLayout.showThemeEditor}
+        onToggleThemeEditor={appLayout.toggleThemeEditor}
+      >
+        <div className="p-6">
+          <Component {...pageProps} />
+        </div>
+      </AppLayout>
     </div>
   );
 }
