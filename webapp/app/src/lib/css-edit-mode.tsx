@@ -13,6 +13,9 @@ interface CssEditContextValue {
   setSelectorLabel(selector: string, label: string): void;
   clearSelector(selector: string): void;
   exportCss(): string;
+  exportJson(): string;
+  renameSelector(oldSel: string, newSel: string): void;
+  resetAll(): void;
 }
 
 const CssEditContext = createContext<CssEditContextValue | undefined>(undefined);
@@ -130,10 +133,30 @@ export const CssEditProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (selectedSelector === selector) { setSelectedSelector(undefined); setSelectedEl(null); }
   };
   const exportCss = () => buildCss(overrides);
+  const exportJson = () => JSON.stringify(overrides, null, 2);
+  const renameSelector = (oldSel: string, newSel: string) => {
+    if (!oldSel || !newSel || oldSel === newSel) return;
+    setOverrides(prev => {
+      const copy = { ...prev };
+      const existing = copy[oldSel]; if (!existing) return prev;
+      const target = copy[newSel];
+      // Merge if target exists
+      copy[newSel] = target ? { ...target, props: { ...target.props, ...existing.props } } : { ...existing, selector: newSel };
+      delete copy[oldSel];
+      return copy;
+    });
+    if (selectedSelector === oldSel) setSelectedSelector(newSel);
+  };
+  const resetAll = () => {
+    if (confirm('Reset ALL CSS overrides? This cannot be undone.')) {
+      setOverrides({});
+      setSelectedEl(null); setSelectedSelector(undefined);
+    }
+  };
   const toggle = () => setEnabled(e => !e);
 
   return (
-    <CssEditContext.Provider value={{ enabled, toggle, selectedEl, selectedSelector, overrides, updateProp, removeProp, setSelectorLabel, clearSelector, exportCss }}>
+    <CssEditContext.Provider value={{ enabled, toggle, selectedEl, selectedSelector, overrides, updateProp, removeProp, setSelectorLabel, clearSelector, exportCss, exportJson, renameSelector, resetAll }}>
       {children}
       {enabled && selectedEl && selectedSelector && (
         <CssInspector selector={selectedSelector} element={selectedEl} />
@@ -163,29 +186,60 @@ const COMMON_PROPS: { key: string; label: string; type?: 'color' | 'text' }[] = 
 ];
 
 const CssInspector: React.FC<{ selector: string; element: HTMLElement }> = ({ selector, element }) => {
-  const { overrides, updateProp, removeProp, clearSelector, setSelectorLabel, exportCss } = useCssEdit();
+  const { overrides, updateProp, removeProp, clearSelector, setSelectorLabel, exportCss, exportJson, renameSelector, resetAll } = useCssEdit();
   const ov = overrides[selector];
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [customProp, setCustomProp] = useState('');
   const [customValue, setCustomValue] = useState('');
+  const [editingSelector, setEditingSelector] = useState(false);
+  const [selectorDraft, setSelectorDraft] = useState(selector);
 
   // position panel near element
   useEffect(() => {
-    const elRect = element.getBoundingClientRect();
-    const panel = panelRef.current;
-    if (panel) {
-      const top = Math.max(8, elRect.top + window.scrollY - panel.offsetHeight - 8);
-      const left = Math.min(window.innerWidth - panel.offsetWidth - 8, Math.max(8, elRect.left + window.scrollX));
-      panel.style.top = `${top}px`;
+    const reposition = () => {
+      const elRect = element.getBoundingClientRect();
+      const panel = panelRef.current; if (!panel) return;
+      const pad = 8;
+      let top = elRect.top + window.scrollY - panel.offsetHeight - 10;
+      if (top < window.scrollY + pad) { // place below element
+        top = elRect.bottom + window.scrollY + 10;
+      }
+      let left = elRect.left + window.scrollX;
+      if (left + panel.offsetWidth + pad > window.scrollX + window.innerWidth) {
+        left = window.scrollX + window.innerWidth - panel.offsetWidth - pad;
+      }
+      if (left < pad) left = pad;
+      panel.style.top = `${Math.max(pad, top)}px`;
       panel.style.left = `${left}px`;
-    }
-  }, [element, selector, ov?.props, showAll]);
+    };
+    reposition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [element, selector, ov?.props, showAll, editingSelector]);
 
   return (
     <div ref={panelRef} className="css-edit-panel fixed z-[9999] max-w-xs w-72 bg-white border border-gray-300 shadow-lg rounded-md p-3 text-xs font-sans space-y-3">
-      <div className="flex items-center justify-between">
-        <strong className="truncate" title={selector}>{ov.label || selector}</strong>
+      <div className="flex items-center justify-between gap-2">
+        {editingSelector ? (
+          <input
+            className="flex-1 border border-blue-400 rounded px-1 py-0.5"
+            value={selectorDraft}
+            onChange={e=>setSelectorDraft(e.target.value)}
+            placeholder="CSS selector"
+            aria-label="CSS selector"
+            title="Edit CSS selector"
+          />
+        ) : (
+          <strong className="truncate flex-1" title={selector}>{ov.label || selector}</strong>
+        )}
+        {!editingSelector && <button className="text-blue-600 text-[11px]" onClick={()=>{ setSelectorDraft(selector); setEditingSelector(true); }}>edit</button>}
+        {editingSelector && <button className="text-green-600 text-[11px]" onClick={()=>{ const newSel = selectorDraft.trim(); if (newSel) { renameSelector(selector, newSel); } setEditingSelector(false); }}>save</button>}
+        {editingSelector && <button className="text-gray-500 text-[11px]" onClick={()=>{ setEditingSelector(false); }}>cancel</button>}
         <button onClick={() => clearSelector(selector)} className="text-red-600 hover:underline">✕</button>
       </div>
       <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -201,12 +255,13 @@ const CssInspector: React.FC<{ selector: string; element: HTMLElement }> = ({ se
         <input className="flex-1 border border-gray-300 rounded px-1 py-0.5" placeholder="value" value={customValue} onChange={e=>setCustomValue(e.target.value)} />
         <button className="px-2 border border-gray-300 rounded bg-gray-50" onClick={() => { if (customProp && customValue) { updateProp(selector, customProp, customValue); setCustomProp(''); setCustomValue(''); } }}>Add</button>
       </div>
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap gap-2 items-center justify-between">
         <button className="text-blue-600 hover:underline" onClick={() => setShowAll(s=>!s)}>{showAll ? 'Hide Others' : 'Show All'}</button>
-        <button className="text-gray-600 hover:underline" onClick={() => {
-          const css = exportCss();
-          navigator.clipboard?.writeText(css).catch(()=>{});
-        }}>Copy CSS</button>
+        <div className="flex gap-2 ml-auto">
+          <button className="text-gray-600 hover:underline" onClick={() => { const css = exportCss(); navigator.clipboard?.writeText(css).catch(()=>{}); }}>CSS</button>
+          <button className="text-gray-600 hover:underline" onClick={() => { const json = exportJson(); navigator.clipboard?.writeText(json).catch(()=>{}); }}>JSON</button>
+          <button className="text-red-500 hover:underline" onClick={() => resetAll()}>Reset</button>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <input className="flex-1 border border-gray-300 rounded px-1 py-0.5" placeholder="Label" value={ov.label || ''} onChange={e=>setSelectorLabel(selector, e.target.value)} />
@@ -216,11 +271,26 @@ const CssInspector: React.FC<{ selector: string; element: HTMLElement }> = ({ se
   );
 };
 
+const colorLike = /color|background|shadow/i;
 const PropRow: React.FC<{ propKey: string; label: string; value?: string; onChange: (v: string) => void; onRemove: () => void }> = ({ propKey, label, value, onChange, onRemove }) => {
+  const isColor = colorLike.test(propKey);
   return (
     <div className="flex items-center gap-2">
       <label className="w-20 truncate" title={propKey}>{label}</label>
+      {isColor && (
+        <input
+          type="color"
+          className="w-7 h-7 p-0 border border-gray-300 rounded"
+          value={(/^#[0-9a-fA-F]{6}$/).test(value||'') ? value : '#000000'}
+          onChange={e=>onChange(e.target.value)}
+          title={propKey}
+        />
+      )}
       <input className="flex-1 border border-gray-300 rounded px-1 py-0.5" value={value || ''} onChange={e=>onChange(e.target.value)} placeholder="value" />
+      {isColor && <button className="text-[10px] px-1 py-0.5 border border-gray-300 rounded" onClick={() => {
+        const resp = prompt(`${propKey} value:`, value || '');
+        if (resp !== null) onChange(resp);
+      }}>…</button>}
       {value && <button onClick={onRemove} className="text-red-500">×</button>}
     </div>
   );
