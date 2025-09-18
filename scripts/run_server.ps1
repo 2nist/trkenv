@@ -86,7 +86,8 @@ $StopRequested = $false
 function Add-Proc {
 	param($Proc, [string]$Name)
 	if ($null -ne $Proc) {
-		$global:Procs += [pscustomobject]@{ Name=$Name; PID=$Proc.Id; Proc=$Proc }
+		# Use script-scope list to avoid uninitialized $global errors
+		$script:Procs += [pscustomobject]@{ Name=$Name; PID=$Proc.Id; Proc=$Proc }
 		Write-Host "Started $Name (PID $($Proc.Id))" -ForegroundColor Green
 	}
 }
@@ -200,7 +201,7 @@ while True:
 
 function Show-Status {
 	Write-Host "\nActive services:" -ForegroundColor Cyan
-	foreach ($p in $Procs) {
+	foreach ($p in $script:Procs) {
 		if (Get-Process -Id $p.PID -ErrorAction SilentlyContinue) {
 			Write-Host (" - {0,-8} PID {1}" -f $p.Name, $p.PID) -ForegroundColor Green
 		} else {
@@ -210,10 +211,10 @@ function Show-Status {
 }
 
 function Stop-All {
-	if ($StopRequested) { return }
-	$global:StopRequested = $true
+	if ($script:StopRequested) { return }
+	$script:StopRequested = $true
 	Write-Host "\nStopping services..." -ForegroundColor Yellow
-	foreach ($p in $Procs) {
+	foreach ($p in $script:Procs) {
 		try {
 			if (Get-Process -Id $p.PID -ErrorAction SilentlyContinue) {
 				Stop-Process -Id $p.PID -Force -ErrorAction SilentlyContinue
@@ -235,7 +236,7 @@ if ($Flow) { Start-FlowRunner }
 Show-Status
 Write-Host "\nPress: 's' = status, 'q' = quit" -ForegroundColor DarkGray
 
-while (-not $StopRequested) {
+while (-not $script:StopRequested) {
 	if ($Host.UI.RawUI.KeyAvailable) {  # built-in $Host (no longer shadowed)
 		$key = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
 		switch ($key.Character) {
@@ -245,7 +246,7 @@ while (-not $StopRequested) {
 	}
 	Start-Sleep -Milliseconds 300
 	# Auto-exit if all processes died
-	if ($Procs.Count -gt 0 -and ($Procs | Where-Object { Get-Process -Id $_.PID -ErrorAction SilentlyContinue }).Count -eq 0) {
+	if ($script:Procs.Count -gt 0 -and ($script:Procs | Where-Object { Get-Process -Id $_.PID -ErrorAction SilentlyContinue }).Count -eq 0) {
 		Write-Host "All services exited." -ForegroundColor Yellow
 		break
 	}
