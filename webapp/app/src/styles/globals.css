@@ -1,3 +1,4 @@
+/* Use local tokens for predictable editing in dev */
 @import "./tokens.css";
 @import "./button-variants.css";
 @tailwind base;
@@ -54,52 +55,13 @@ body,
   height: 100%;
 }
 body {
-  background: #B79F7C;
-  color: #171616;
+  /* Use theme variables for base colors */
+  background: var(--bg);
+  color: var(--text);
   font-family: var(--font-typewriter, "Tox Typewriter", monospace);
   font-size: 14px;
   line-height: 1.6;
   letter-spacing: 0.05em;
-  background-image:
-    /* High-contrast wrinkle texture patterns */
-    linear-gradient(45deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px),
-    linear-gradient(-45deg, rgba(0, 0, 0, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
-    /* Diagonal crease shadows */
-    linear-gradient(135deg, rgba(0, 0, 0, 0.07) 2px, transparent 2px),
-    linear-gradient(-135deg, rgba(0, 0, 0, 0.05) 2px, transparent 2px),
-    /* Major fold lines */
-    linear-gradient(23deg, rgba(0, 0, 0, 0.06) 1px, transparent 3px),
-    linear-gradient(67deg, rgba(0, 0, 0, 0.04) 1px, transparent 4px),
-    linear-gradient(156deg, rgba(0, 0, 0, 0.05) 1px, transparent 3px),
-    linear-gradient(89deg, rgba(0, 0, 0, 0.03) 1px, transparent 5px),
-    /* Paper fiber texture */
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.02) 0px, transparent 1px, rgba(0, 0, 0, 0.015) 2px),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.015) 0px, transparent 1px, rgba(0, 0, 0, 0.01) 2px),
-    /* Original kraft dots */
-    radial-gradient(circle at 25% 25%, rgba(90, 70, 45, 0.1) 1px, transparent 1px),
-    radial-gradient(circle at 75% 75%, rgba(90, 70, 45, 0.08) 1px, transparent 1px);
-  background-size:
-    /* High-contrast wrinkles */
-    8px 8px,
-    12px 12px,
-    4px 4px,
-    6px 6px,
-    /* Diagonal creases */
-    16px 16px,
-    14px 14px,
-    /* Major fold lines */
-    24px 24px,
-    32px 32px,
-    28px 28px,
-    20px 20px,
-    /* Paper fiber */
-    3px 3px,
-    3px 3px,
-    /* Kraft dots */
-    18px 18px,
-    22px 22px;
 }
 
 :root {
@@ -112,6 +74,12 @@ body {
   /* ensure content isn't obscured by a fixed footer */
   padding-bottom: var(--footer-height);
 }
+
+/* Debug/helper: disable translate on content */
+.no-translate { transform: none !important; }
+
+/* Horizontal scroll container for timeline */
+.timeline-scroll { overflow-x: auto; overflow-y: hidden; }
 
 /* Font utility classes */
 .font-handwritten {
@@ -132,6 +100,8 @@ body {
 .css-edit-panel {
   font-family: system-ui, sans-serif;
 }
+.css-edit-right-panel { width: var(--css-edit-panel-width, 360px); }
+.app-left-sidebar { width: var(--app-left-sidebar-width, 320px); }
 
 /* Special Elite font utility (used sparingly for headings) */
 .font-special-elite {
@@ -143,7 +113,7 @@ body {
   font-size: 14px;
   line-height: 1.6;
   letter-spacing: 0.05em;
-  color: #000000;
+  color: var(--text);
   font-weight: 700; /* main text should be bold per design */
 }
 
@@ -214,7 +184,7 @@ p, div, span, input, textarea, label, li {
   font-size: 14px;
   line-height: 1.6;
   letter-spacing: 0.05em;
-  color: #000000;
+  color: var(--text);
   font-weight: 700; /* ensure main text is bold */
 }
 
@@ -222,7 +192,7 @@ p, div, span, input, textarea, label, li {
 h1, h2, h3, h4, h5, h6 {
   /* Switch headers to Sharpie (handwritten) */
   font-family: var(--font-handwritten);
-  color: #000000;
+  color: var(--text);
   letter-spacing: 0.05em;
   line-height: 1.4;
   font-weight: 700;
@@ -246,7 +216,7 @@ h4, h5, h6 { font-size: 14px; }
   font-size: 14px;
   line-height: 1.6;
   letter-spacing: 0.05em;
-  color: #000000;
+  color: var(--text);
 }
 
 .card {
@@ -441,6 +411,11 @@ h4, h5, h6 { font-size: 14px; }
     );
 }
 
+/* Debug: remove cylinder background */
+.no-cylinder-bg.cylindrical-timeline {
+  background: var(--bg, #222);
+}
+
 /* Make the timeline rails span the full viewport width */
 .cylindrical-timeline,
 .timeline-content {
@@ -477,7 +452,7 @@ h4, h5, h6 { font-size: 14px; }
   width: 2px;
   transform: translateX(-50%);
   /* Keep playhead above overlay */
-  z-index: 200;
+  z-index: 1000;
   pointer-events: none;
 
   background: linear-gradient(
@@ -576,8 +551,8 @@ h4, h5, h6 { font-size: 14px; }
     rgba(20, 15, 10, 1.0) 100%
   );
   pointer-events: none;
-  /* Place under the playhead (playhead z-index is 200) */
-  z-index: 150;
+  /* Place under content and playhead */
+  z-index: 120;
 }
 
 /* Subtle vignette to emphasize curved edges */
@@ -585,7 +560,7 @@ h4, h5, h6 { font-size: 14px; }
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 160; /* above content overlay but below playhead/footer */
+  z-index: 130; /* above base overlay, below content and playhead */
   background: radial-gradient(ellipse at center, rgba(0,0,0,0) 30%, rgba(0,0,0,0.25) 70%);
   mix-blend-mode: multiply;
 }
@@ -595,7 +570,7 @@ h4, h5, h6 { font-size: 14px; }
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 155;
+  z-index: 125;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='table' tableValues='0 0.08'/></feComponentTransfer></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.06'/></svg>");
   background-size: cover;
   opacity: 0.07;
@@ -616,7 +591,7 @@ h4, h5, h6 { font-size: 14px; }
   bottom: 0;
   top: 0;
   pointer-events: none;
-  z-index: 170; /* just below playhead which is 200 */
+  z-index: 135; /* below content and playhead */
   background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.06) 48%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.06) 52%, rgba(255,255,255,0) 100%);
   filter: blur(10px) saturate(0.8);
   /* Controlled by JS: --sheen-x moves the specular highlight when the timeline moves. */
@@ -638,7 +613,7 @@ h4, h5, h6 { font-size: 14px; }
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 165;
+  z-index: 128;
   background-image: linear-gradient(rgba(0,0,0,0.02) 0.5px, transparent 0.5px);
   background-size: 100% 3px;
   opacity: 0.6;
@@ -650,7 +625,7 @@ h4, h5, h6 { font-size: 14px; }
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 158;
+  z-index: 122;
   background: radial-gradient(ellipse at left center, rgba(255,0,64,0.02) 0%, transparent 12%),
               radial-gradient(ellipse at right center, rgba(0,160,255,0.02) 0%, transparent 12%);
   mix-blend-mode: screen;
@@ -667,6 +642,11 @@ h4, h5, h6 { font-size: 14px; }
   height: var(--footer-height);
   z-index: 9999; /* intentionally very high so footer remains above timeline and overlays */
   box-shadow: 0 -6px 18px rgba(0,0,0,0.12);
+}
+
+/* Helper to offset content area bottom by footer height */
+.offset-bottom-footer {
+  bottom: var(--footer-height);
 }
 
 /* Vintage fader/pot styles for range inputs */

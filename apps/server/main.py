@@ -2,7 +2,7 @@ from __future__ import annotations
 import sys, os, json, uuid, threading, queue, time, importlib.util
 from pathlib import Path
 from typing import Dict, Any
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, HTMLResponse, Response
 from pydantic import BaseModel
@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse, Response, StreamingResponse
 from services.sdk_py.base import RunContext
 from fastapi.staticfiles import StaticFiles
 from services.lyrics_source import resolve_lyrics
+from apps.server.models.palette import CanvasDoc, XY, Size, Node, Group  # type: ignore
 
 # Helper: import an optional router module and return its `router` attr if present.
 def _optional_import_router(module_path: str, attr: str = 'router'):
@@ -37,6 +38,7 @@ RUNS = ROOT / "runs"
 WEB  = ROOT / "webapp" / "host"
 THEME_DIR = ROOT / "webapp" / "theme"
 THEMES = THEME_DIR / "themes"
+PALETTES_DIR = ROOT / "data" / "palettes"
 
 app = FastAPI(title="TRK Host")
 
@@ -180,7 +182,13 @@ def start_job(exp_id: str, body: Dict[str, Any]):
 def job_status(job_id: str):
     j = JOBS.get(job_id)
     if not j: raise HTTPException(404, "job not found")
-    return {"jobId": j.id, "status": j.status}
+    state = (
+        "queued" if j.status in ("pending", "queued") else
+        "running" if j.status == "running" else
+        "done" if j.status in ("completed", "cancelled") else
+        "error"
+    )
+    return {"jobId": j.id, "status": j.status, "state": state}
 
 @app.get("/api/jobs/{job_id}/logs/stream")
 def stream_logs(job_id: str):
@@ -209,13 +217,28 @@ def list_artifacts(job_id: str):
     if art.exists():
         for fp in art.glob("**/*"):
             if fp.is_file():
+                rel = fp.relative_to(job.dir)
+                item = {
+                    "name": fp.name,
+                    "relpath": str(rel),
+                    "relPath": str(rel),
+                    "size": fp.stat().st_size,
+                    "uri": fp.resolve().as_uri(),
+                }
+                rows.append(item)
+    # Fallback: if no artifacts recorded yet, scan entire job dir for known outputs
+    if not rows:
+        for fp in job.dir.glob("**/*"):
+            if fp.is_file() and fp.name.lower().endswith(("segments.json",".mid","words.json")):
+                rel = fp.relative_to(job.dir)
                 rows.append({
                     "name": fp.name,
-                    "relpath": str(fp.relative_to(job.dir)),
+                    "relpath": str(rel),
+                    "relPath": str(rel),
                     "size": fp.stat().st_size,
                     "uri": fp.resolve().as_uri(),
                 })
-    return {"jobId": job.id, "status": job.status, "artifacts": rows}
+    return {"jobId": job.id, "status": job.status, "artifacts": rows, "items": rows}
 
 @app.post("/api/uploads")
 async def upload_file(file: UploadFile = File(...)):
@@ -277,6 +300,19 @@ def init_db():
             song_id TEXT,
             tag TEXT,
             UNIQUE(song_id, tag)
+        )
+        """
+    )
+    # Palettes
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS palettes (
+            id TEXT PRIMARY KEY,
+            experiment_id TEXT,
+            name TEXT,
+            doc_json TEXT,
+            created_at TEXT,
+            updated_at TEXT
         )
         """
     )
@@ -833,6 +869,238 @@ def download_db():
     if not DB_PATH.exists():
         raise HTTPException(404, "db not found")
     return StreamingResponse(DB_PATH.open('rb'), media_type='application/octet-stream')
+
+
+# ---------------------- Palettes (Canvas) API ----------------------
+
+def _now_iso():
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+def _default_canvas_doc(palette_id: str, name: str, experiment_id: str | None = None) -> dict:
+    return {
+        "id": palette_id,
+        "experiment_id": experiment_id,
+        "name": name,
+        "nodes": [],
+        "groups": [],
+        "grid_size": 8,
+        "snap": True,
+        "zoom": 1.0,
+        "viewport": {"x": 0, "y": 0},
+        "meta": {},
+    }
+
+def _palette_get_row(palette_id: str) -> dict | None:
+    conn = get_db_conn(); cur = conn.cursor()
+    cur.execute("SELECT id, experiment_id, name, doc_json, created_at, updated_at FROM palettes WHERE id = ?", (palette_id,))
+    r = cur.fetchone(); conn.close()
+    if not r:
+        return None
+    row = dict(r)
+    try:
+        row["doc"] = json.loads(row.get("doc_json") or "{}")
+    except Exception:
+        row["doc"] = {}
+    return row
+
+def _palette_save_row(palette_id: str, doc: dict, name: str | None = None, experiment_id: str | None = None) -> dict:
+    now = _now_iso()
+    conn = get_db_conn(); cur = conn.cursor()
+    # Upsert
+    cur.execute("SELECT id FROM palettes WHERE id = ?", (palette_id,))
+    exists = cur.fetchone() is not None
+    if exists:
+        cur.execute(
+            "UPDATE palettes SET experiment_id = COALESCE(?, experiment_id), name = COALESCE(?, name), doc_json = ?, updated_at = ? WHERE id = ?",
+            (experiment_id, name, json.dumps(doc), now, palette_id)
+        )
+    else:
+        cur.execute(
+            "INSERT INTO palettes (id, experiment_id, name, doc_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (palette_id, experiment_id, name or doc.get("name") or "Untitled", json.dumps(doc), now, now)
+        )
+    conn.commit(); conn.close()
+    return {"id": palette_id, "doc": doc, "name": name or doc.get("name"), "experiment_id": experiment_id, "updated_at": now}
+
+@app.get("/api/palettes")
+def palette_list():
+    conn = get_db_conn(); cur = conn.cursor()
+    cur.execute("SELECT id, experiment_id, name, updated_at FROM palettes ORDER BY updated_at DESC")
+    items = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return {"items": items, "total": len(items)}
+
+@app.post("/api/palettes")
+def palette_create(body: Dict[str, Any]):
+    pid = uuid.uuid4().hex[:12]
+    name = body.get("name") or f"Canvas {pid}"
+    exp = body.get("experiment_id")
+    doc = _default_canvas_doc(pid, name, exp)
+    row = _palette_save_row(pid, doc, name=name, experiment_id=exp)
+    return {"id": pid, "doc": row["doc"], "name": name, "experiment_id": exp}
+
+@app.get("/api/palettes/{palette_id}")
+def palette_get(palette_id: str):
+    row = _palette_get_row(palette_id)
+    if not row:
+        raise HTTPException(404, "palette not found")
+    # Attach ETag header with updated_at for optimistic concurrency
+    resp = Response(content=json.dumps(row["doc"]), media_type="application/json")
+    if row.get("updated_at"):
+        resp.headers["ETag"] = row["updated_at"]
+    return resp
+
+@app.patch("/api/palettes/{palette_id}")
+def palette_patch(palette_id: str, body: Dict[str, Any], if_match: str | None = Header(default=None, alias="If-Match")):
+    row = _palette_get_row(palette_id)
+    if not row:
+        raise HTTPException(404, "palette not found")
+    # If-Match handling (optimistic concurrency)
+    if if_match and row.get("updated_at") and if_match.strip('"') != str(row["updated_at"]):
+        raise HTTPException(status_code=409, detail="conflict: stale ETag")
+    doc = row["doc"] or {}
+    # Shallow updates for top-level fields
+    for k in ("name", "experiment_id", "grid_size", "snap", "zoom", "viewport", "meta"):
+        if k in body:
+            doc[k] = body[k]
+    # Full replacement of arrays if provided
+    if "nodes" in body and isinstance(body["nodes"], list):
+        doc["nodes"] = body["nodes"]
+    if "groups" in body and isinstance(body["groups"], list):
+        doc["groups"] = body["groups"]
+    saved = _palette_save_row(palette_id, doc, name=doc.get("name"), experiment_id=doc.get("experiment_id"))
+    resp = Response(content=json.dumps({"id": palette_id, "doc": doc}), media_type="application/json")
+    if saved.get("updated_at"):
+        resp.headers["ETag"] = saved["updated_at"]
+    return resp
+
+@app.delete("/api/palettes/{palette_id}")
+def palette_delete(palette_id: str):
+    conn = get_db_conn(); cur = conn.cursor()
+    cur.execute("DELETE FROM palettes WHERE id = ?", (palette_id,))
+    conn.commit(); conn.close()
+    return {"deleted": True, "id": palette_id}
+
+def _find_node(nodes: list[dict], node_id: str) -> int:
+    for i, n in enumerate(nodes):
+        if n.get("id") == node_id:
+            return i
+    return -1
+
+@app.post("/api/palettes/{palette_id}/nodes")
+def palette_add_node(palette_id: str, body: Dict[str, Any]):
+    row = _palette_get_row(palette_id)
+    if not row:
+        raise HTTPException(404, "palette not found")
+    doc = row["doc"] or {}
+    nodes = doc.setdefault("nodes", [])
+    nid = body.get("id") or uuid.uuid4().hex[:8]
+    body["id"] = nid
+    nodes.append(body)
+    saved = _palette_save_row(palette_id, doc, name=doc.get("name"), experiment_id=doc.get("experiment_id"))
+    resp = Response(content=json.dumps(body), media_type="application/json")
+    if saved.get("updated_at"):
+        resp.headers["ETag"] = saved["updated_at"]
+    return resp
+
+@app.patch("/api/palettes/{palette_id}/nodes/{node_id}")
+def palette_patch_node(palette_id: str, node_id: str, body: Dict[str, Any], if_match: str | None = Header(default=None, alias="If-Match")):
+    row = _palette_get_row(palette_id)
+    if not row:
+        raise HTTPException(404, "palette not found")
+    # If-Match handling (optimistic concurrency)
+    if if_match and row.get("updated_at") and if_match.strip('"') != str(row["updated_at"]):
+        raise HTTPException(status_code=409, detail="conflict: stale ETag")
+    doc = row["doc"] or {}
+    nodes = doc.setdefault("nodes", [])
+    idx = _find_node(nodes, node_id)
+    if idx < 0:
+        raise HTTPException(404, "node not found")
+    node = nodes[idx]
+    for k, v in body.items():
+        if k == "id":
+            continue
+        node[k] = v
+    nodes[idx] = node
+    saved = _palette_save_row(palette_id, doc, name=doc.get("name"), experiment_id=doc.get("experiment_id"))
+    resp = Response(content=json.dumps(node), media_type="application/json")
+    if saved.get("updated_at"):
+        resp.headers["ETag"] = saved["updated_at"]
+    return resp
+
+@app.delete("/api/palettes/{palette_id}/nodes/{node_id}")
+def palette_delete_node(palette_id: str, node_id: str):
+    row = _palette_get_row(palette_id)
+    if not row:
+        raise HTTPException(404, "palette not found")
+    doc = row["doc"] or {}
+    nodes = doc.setdefault("nodes", [])
+    idx = _find_node(nodes, node_id)
+    if idx < 0:
+        raise HTTPException(404, "node not found")
+    nodes.pop(idx)
+    _palette_save_row(palette_id, doc, name=doc.get("name"), experiment_id=doc.get("experiment_id"))
+    return {"deleted": True}
+
+@app.post("/api/palettes/{palette_id}/snapshot")
+def palette_snapshot(palette_id: str):
+    row = _palette_get_row(palette_id)
+    if not row:
+        raise HTTPException(404, "palette not found")
+    doc = row["doc"] or {}
+    PALETTES_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir = PALETTES_DIR / palette_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+    ts = time.strftime("%Y%m%d-%H%M%S")
+    fp = out_dir / f"{ts}.json"
+    fp.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+    return {"ok": True, "palette_id": palette_id, "snapshot": {"ts": ts, "path": str(fp)}}
+
+@app.get("/api/palettes/{palette_id}/snapshots")
+def palette_list_snapshots(palette_id: str, limit: int = 50, offset: int = 0):
+    out_dir = PALETTES_DIR / palette_id
+    items = []
+    if out_dir.exists():
+        files = sorted([p for p in out_dir.glob("*.json")], key=lambda p: p.name, reverse=True)
+        total = len(files)
+        for p in files[offset:offset+limit]:
+            items.append({"ts": p.stem, "path": str(p)})
+    else:
+        total = 0
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+@app.post("/api/palettes/{palette_id}/restore")
+def palette_restore(palette_id: str, body: Dict[str, Any]):
+    """Restore a palette from a snapshot file.
+
+    Body parameters:
+      - ts: timestamp of the snapshot (preferred)
+      - path: absolute path to a snapshot json (optional)
+    """
+    row = _palette_get_row(palette_id)
+    if not row:
+        raise HTTPException(404, "palette not found")
+
+    ts = body.get("ts")
+    path = body.get("path")
+    fp: Path
+    if ts:
+        fp = (PALETTES_DIR / palette_id / f"{ts}.json")
+    elif path:
+        fp = Path(path)
+    else:
+        raise HTTPException(400, "ts or path required")
+    if not fp.exists():
+        raise HTTPException(404, "snapshot not found")
+    try:
+        doc = json.loads(fp.read_text(encoding="utf-8"))
+    except Exception:
+        raise HTTPException(400, "invalid snapshot contents")
+    saved = _palette_save_row(palette_id, doc, name=doc.get("name"), experiment_id=doc.get("experiment_id"))
+    resp = Response(content=json.dumps({"id": palette_id, "doc": doc}), media_type="application/json")
+    if saved.get("updated_at"):
+        resp.headers["ETag"] = saved["updated_at"]
+    return resp
 
 
 @app.get("/theme/{path:path}")

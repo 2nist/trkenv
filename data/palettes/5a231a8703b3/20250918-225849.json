@@ -1,0 +1,32 @@
+{
+  "id": "5a231a8703b3",
+  "experiment_id": null,
+  "name": "ResTest-626",
+  "nodes": [
+    {
+      "feature": "panel",
+      "component": "Text",
+      "position": {
+        "x": 30,
+        "y": 30
+      },
+      "size": {
+        "w": 200,
+        "h": 100
+      },
+      "props_overrides": {
+        "text": "Resilience"
+      },
+      "id": "93fa6f1d"
+    }
+  ],
+  "groups": [],
+  "grid_size": 8,
+  "snap": true,
+  "zoom": 1.0,
+  "viewport": {
+    "x": 0,
+    "y": 0
+  },
+  "meta": {}
+}

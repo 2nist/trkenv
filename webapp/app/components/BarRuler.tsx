@@ -77,7 +77,7 @@ export function BarRuler({
   }, [wrapperRef, totalWidth, bars, beatsPerBar, zoom]);
 
   return (
-    <div ref={wrapperRef} className="relative h-12 bg-stone-900/80 border border-stone-600/50 overflow-hidden vintage-timeline-element timeline-wrapper">
+  <div ref={wrapperRef} className="relative h-12 bg-yellow-900/30 border border-yellow-600/50 overflow-hidden vintage-timeline-element timeline-wrapper ring-1 ring-yellow-500/30">
       {/* baseline */}
       <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-stone-400/50" />
       {Array.from({ length: bars + 1 }).map((_, barIdx) => {

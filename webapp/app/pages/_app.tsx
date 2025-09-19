@@ -34,30 +34,29 @@ const dymo = localFont({
 export default function App({ Component, pageProps }: AppProps) {
   const [themes, setThemes] = React.useState<string[]>([]);
   const appLayout = useAppLayout();
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:8000';
+  const enableThemeLoader = (process.env.NEXT_PUBLIC_ENABLE_THEME_LOADER === '1');
 
   React.useEffect(() => {
+    if (!enableThemeLoader) return;
     // Dynamically import the ESM theme API (served from /theme/theme-api.mjs)
     if (typeof window === 'undefined') return;
     (async () => {
       try {
-  // try to import the module at runtime; use an expression so bundlers don't resolve it at build time
-    const mod = await import(window.location.origin + '/theme/theme-api.mjs');
+        // try to import the module from backend at runtime
+        const mod = await import(/* @vite-ignore */ `${apiBase}/theme/theme-api.mjs`);
         if (typeof mod.trkLoadCurrent === 'function') {
           try { await mod.trkLoadCurrent(); } catch (e) {}
         } else if (typeof (window as any).trkLoadCurrent === 'function') {
           try { (window as any).trkLoadCurrent(); } catch (e) {}
         }
 
-        // try to fetch the themes directory listing by reading a known themes list
-        // fallback: use a hard-coded list if the server doesn't provide one
+        // get available themes from API
         try {
-          const r = await fetch('/theme/themes/list.json');
-          if (r.ok) {
-            const data = await r.json();
-            setThemes(Array.isArray(data) ? data : []);
-          } else {
-            setThemes(['midnight']);
-          }
+          const r = await fetch(`${apiBase}/api/theme/list`);
+          const data = await r.json();
+          const list = Array.isArray(data?.themes) ? data.themes : [];
+          setThemes(list.length ? list : ['midnight']);
         } catch (e) {
           setThemes(['midnight']);
         }
@@ -72,55 +71,42 @@ export default function App({ Component, pageProps }: AppProps) {
   }, []);
 
   return (
-    <div className={`min-h-screen bg-white text-gray-900 ${handwritten.variable} ${typewriter.variable} ${dymo.variable}`}>
+    <div className={`min-h-screen bg-[var(--bg)] text-[var(--text)] ${handwritten.variable} ${typewriter.variable} ${dymo.variable}`}>
       {/* Top Navigation Bar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
+      <div className="bg-[var(--surface)] border-b border-[color:var(--border,#2a2d33)] px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-gray-900 font-dymo">TRK Lab</h1>
+            <h1 className="text-xl font-bold text-[var(--text)] font-dymo">TRK Lab</h1>
             <nav className="hidden md:flex items-center gap-6">
-              <Link href="/" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/" className="text-[color:var(--muted)] hover:text-[var(--text)] transition-colors">
                 Home
               </Link>
-              <Link href="/design" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/design" className="text-[color:var(--muted)] hover:text-[var(--text)] transition-colors">
                 Design
               </Link>
-              <Link href="/songs" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/songs" className="text-[color:var(--muted)] hover:text-[var(--text)] transition-colors">
                 Songs
               </Link>
             </nav>
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Theme Editor Toggle Button */}
-            <button
-              onClick={appLayout.toggleThemeEditor}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                appLayout.showThemeEditor
-                  ? 'bg-blue-500 text-white hover:bg-blue-600'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-              }`}
-              title={appLayout.showThemeEditor ? 'Show Navigation' : 'Show Theme Editor'}
-            >
-              {appLayout.showThemeEditor ? 'Navigation' : 'Theme Editor'}
-            </button>
-
-            <ThemeSwitcher themes={themes} onSet={(t) => {
-              if (typeof (window as any).trkSetTheme === 'function') (window as any).trkSetTheme(t);
-              else {
-                // try dynamic import fallback
-                        import(window.location.origin + '/theme/theme-api.mjs').then((m: any) => m.trkSetTheme && m.trkSetTheme(t)).catch(()=>{});
-              }
-            }} />
+            {/* Theme Editor intentionally hidden in this build */}
+            {/* ThemeSwitcher also disabled by default; re-enable by setting NEXT_PUBLIC_ENABLE_THEME_LOADER=1 */}
+            {false && enableThemeLoader && (
+              <ThemeSwitcher themes={themes} onSet={(t) => {
+                if (typeof (window as any).trkSetTheme === 'function') (window as any).trkSetTheme(t);
+                else {
+                  import(/* @vite-ignore */ `${apiBase}/theme/theme-api.mjs`).then((m: any) => m.trkSetTheme && m.trkSetTheme(t)).catch(()=>{});
+                }
+              }} />
+            )}
           </div>
         </div>
       </div>
 
       {/* Main App Layout with Theme Editor Sidebar */}
-      <AppLayout
-        showThemeEditor={appLayout.showThemeEditor}
-        onToggleThemeEditor={appLayout.toggleThemeEditor}
-      >
+      <AppLayout showThemeEditor={false} onToggleThemeEditor={() => {}}>
         <div className="p-6">
           <Component {...pageProps} />
         </div>

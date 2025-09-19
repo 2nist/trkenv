@@ -161,7 +161,7 @@ export function ChordLane({
   return (
     <div
       ref={wrapperRef}
-      className="relative h-[32px] bg-stone-900/60 border border-stone-600/40 overflow-hidden vintage-timeline-element timeline-wrapper"
+      className="relative h-[32px] bg-stone-900/60 border border-stone-600/40 overflow-hidden vintage-timeline-element timeline-wrapper ring-1 ring-green-500/30"
     >
       {chords?.map((c, i) => {
         const beat = c.startBeat;
@@ -177,13 +177,13 @@ export function ChordLane({
             <div
               aria-hidden
               ref={(el) => { underlayRefs.current[i] = el; }}
-              className="timeline-item-underlay var-left var-width var-height"
+              className="timeline-item-underlay absolute top-1/2 var-left var-width var-height"
             />
 
             {/* visible item label centered on beat (left = exact time); no parallax */}
             <div
               ref={(el) => { labelRefs.current[i] = el; }}
-              className="timeline-item-label var-left var-height var-transform text-xs px-3 text-stone-700 font-bold whitespace-nowrap border border-stone-400/30 shadow-sm font-typewriter"
+              className="timeline-item-label absolute top-1/2 var-left var-height var-transform text-xs px-3 text-stone-50 font-bold whitespace-nowrap border border-stone-400/30 shadow-sm font-typewriter"
               title={`Beat ${c.startBeat}`}
             >
               {c.symbol}

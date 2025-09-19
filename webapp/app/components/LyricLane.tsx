@@ -144,7 +144,7 @@ export function LyricLane({
   }, [groups, zoom, laneOffset, width, ITEM_HEIGHT, beatsPerBar]);
 
   return (
-    <div ref={wrapperRef} className="relative min-h-[32px] bg-stone-900/60 border border-stone-600/40 overflow-hidden vintage-timeline-element timeline-wrapper">
+    <div ref={wrapperRef} className="relative min-h-[32px] bg-stone-900/60 border border-stone-600/40 overflow-hidden vintage-timeline-element timeline-wrapper ring-1 ring-blue-500/30">
       {groups.map((g, gi) => {
         const beat = g.startBeat;
         const nextBeat = groups[gi + 1]?.startBeat ?? (beat + (beatsPerBar || 4));
@@ -154,9 +154,9 @@ export function LyricLane({
 
         return (
           <div key={`g-${gi}`} className="relative">
-            <div aria-hidden ref={(el) => { underlayRefs.current[gi] = el; }} className="timeline-item-underlay var-left var-width var-height" />
+            <div aria-hidden ref={(el) => { underlayRefs.current[gi] = el; }} className="timeline-item-underlay absolute top-1/2 var-left var-width var-height" />
 
-            <div ref={(el) => { labelRefs.current[gi] = el; }} className="timeline-item-label var-left var-height var-transform -translate-x-1/2 text-xs px-3 text-stone-700 font-bold whitespace-nowrap border border-stone-400/30 shadow-sm font-typewriter">
+            <div ref={(el) => { labelRefs.current[gi] = el; }} className="timeline-item-label absolute top-1/2 var-left var-height var-transform -translate-x-1/2 text-xs px-3 text-stone-50 font-bold whitespace-nowrap border border-stone-400/30 shadow-sm font-typewriter">
               {g.items[0]?.text}
             </div>
 

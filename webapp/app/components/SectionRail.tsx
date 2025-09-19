@@ -66,19 +66,24 @@ export function SectionRail({
     if (wrapperRef.current) {
       wrapperRef.current.style.setProperty('--transform', `translateX(${laneOffset}px)`);
       wrapperRef.current.style.setProperty('--filter', depthBlur ? `blur(${depthBlur}px)` : 'none');
+      if (typeof totalBeats === 'number' && totalBeats > 0) {
+        const width = totalBeats * zoom;
+        wrapperRef.current.style.setProperty('--width', `${width}px`);
+      }
     }
     sections?.forEach((s, i) => {
       const el = itemRefs.current[i];
       if (el) {
         el.style.setProperty('--left', `${s.startBeat * zoom}px`);
         el.style.setProperty('--width', `${Math.max(1, s.lengthBeats * zoom)}px`);
-        el.style.setProperty('--bg', s.color || '#334155');
+        const sectionColor = s.color || '#334155';
+        el.style.setProperty('--bg-gradient', `linear-gradient(to right, ${sectionColor}, ${sectionColor}aa)`);
       }
     });
   }, [sections, zoom, laneOffset, depthBlur]);
 
   return (
-    <div ref={wrapperRef} className="relative h-9 vintage-timeline-element timeline-wrapper">
+    <div ref={wrapperRef} className="relative h-9 vintage-timeline-element timeline-wrapper ring-1 ring-red-500/40">
       {sections?.map((s, i) => {
         // Muted vintage section colors
         const vintageColors = {
@@ -95,7 +100,7 @@ export function SectionRail({
           <div
             key={i}
             ref={(el) => { itemRefs.current[i] = el; }}
-            className="absolute h-full text-xs text-stone-200/90 flex items-center px-2 font-typewriter var-left var-width section-bg"
+            className="absolute h-full text-xs text-stone-50 flex items-center px-2 font-typewriter var-left var-width section-bg"
             title={`${s.name}`}
           >
             <span className="truncate drop-shadow-sm">{s.name}</span>

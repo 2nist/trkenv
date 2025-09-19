@@ -68,6 +68,29 @@ def main():
     exps = http_get(f"{base}/api/experiments")
     print(json.dumps(exps, indent=2))
 
+    print("\nTHEME ENDPOINTS:")
+    try:
+        theme_list = http_get(f"{base}/api/theme/list")
+        print("/api/theme/list:", json.dumps(theme_list, indent=2))
+    except SystemExit as e:
+        print("/api/theme/list failed:", e)
+    try:
+        current = http_get(f"{base}/api/theme/current.json")
+        print("/api/theme/current.json:", json.dumps(current, indent=2))
+    except SystemExit as e:
+        print("/api/theme/current.json failed:", e)
+    # Static assets sanity check
+    try:
+        tokens_css = http_get(f"{base}/theme/tokens.css")
+        print("/theme/tokens.css bytes:", len(tokens_css) if isinstance(tokens_css, (bytes, bytearray)) else 0)
+    except SystemExit as e:
+        print("/theme/tokens.css failed:", e)
+    try:
+        loader_js = http_get(f"{base}/theme/theme-loader.js")
+        print("/theme/theme-loader.js bytes:", len(loader_js) if isinstance(loader_js, (bytes, bytearray)) else 0)
+    except SystemExit as e:
+        print("/theme/theme-loader.js failed:", e)
+
     print("\nSTART JOB (audio-engine):")
     job = http_post_json(f"{base}/api/experiments/audio-engine/jobs", {"audio": args.audio})
     print(json.dumps(job, indent=2))

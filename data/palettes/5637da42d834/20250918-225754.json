@@ -1,0 +1,32 @@
+{
+  "id": "5637da42d834",
+  "experiment_id": null,
+  "name": "ResTest-799",
+  "nodes": [
+    {
+      "feature": "panel",
+      "component": "Text",
+      "position": {
+        "x": 30,
+        "y": 30
+      },
+      "size": {
+        "w": 200,
+        "h": 100
+      },
+      "props_overrides": {
+        "text": "Resilience"
+      },
+      "id": "e845bef1"
+    }
+  ],
+  "groups": [],
+  "grid_size": 8,
+  "snap": true,
+  "zoom": 1.0,
+  "viewport": {
+    "x": 0,
+    "y": 0
+  },
+  "meta": {}
+}

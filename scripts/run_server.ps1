@@ -173,9 +173,21 @@ function Start-Frontend {
 	Ensure-NodeModules
 	$env:NEXT_PUBLIC_API_BASE = "http://${BindHost}:$ApiPort"
 	pushd webapp/app
-	# Directly run next dev with explicit host/port (avoid argument flattening issues)
-	$nextArgs = @('next','dev','-H', $BindHost, '-p', "$WebPort")
-	$p = Start-Process -PassThru -NoNewWindow -FilePath npx -ArgumentList $nextArgs
+	# Prefer npm run dev with explicit host/port overrides (more reliable on Windows than invoking npx directly)
+	try {
+		$npmArgs = @('run','dev','--','-H', $BindHost, '-p', "$WebPort")
+		$p = Start-Process -PassThru -NoNewWindow -FilePath npm -ArgumentList $npmArgs
+	} catch {
+		# Fallback: invoke next binary directly
+		$nextCmd = Join-Path (Resolve-Path '.').Path 'node_modules/.bin/next.cmd'
+		if (Test-Path $nextCmd) {
+			$p = Start-Process -PassThru -NoNewWindow -FilePath $nextCmd -ArgumentList @('dev','-H', $BindHost, '-p', "$WebPort")
+		} else {
+			# Last resort: use node to run next
+			$nextJs = Join-Path (Resolve-Path '.').Path 'node_modules/next/dist/bin/next'
+			$p = Start-Process -PassThru -NoNewWindow -FilePath node -ArgumentList @($nextJs,'dev','-H', $BindHost, '-p', "$WebPort")
+		}
+	}
 	popd
 	Add-Proc $p 'frontend'
 }

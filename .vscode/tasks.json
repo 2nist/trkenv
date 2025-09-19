@@ -1,6 +1,45 @@
 {
+	"$schema": "vscode://schemas/tasks",
 	"version": "2.0.0",
 	"tasks": [
+		{
+			"label": "Smoke",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoLogo",
+				"-NoProfile",
+				"-File",
+				"scripts/run_smoke.ps1",
+				"-Base",
+				"http://127.0.0.1:8000",
+				"-Audio",
+				"file:///C:/Windows/Media/Windows%20Background.wav"
+			],
+			"group": "test",
+			"problemMatcher": []
+		},
+		{
+			"label": "Test",
+			"type": "shell",
+			"command": "pwsh",
+			"args": [
+				"-NoLogo",
+				"-NoProfile",
+				"-Command",
+				"if (Test-Path ./.venv/Scripts/python.exe) { ./.venv/Scripts/python.exe -m pytest -q } else { python -m pytest -q }"
+			],
+			"group": "test",
+				"problemMatcher": []
+		},
+		{
+			"label": "Smoke+Test",
+			"type": "shell",
+			"command": "pwsh",
+			"args": ["-NoLogo","-NoProfile","-File","scripts/run_all_checks.ps1"],
+			"group": "test",
+			"problemMatcher": []
+		},
 		{
 			"label": "backend: uvicorn",
 			"type": "shell",
@@ -8,7 +47,7 @@
 			"args": [
 				"-NoExit",
 				"-Command",
-				"cd ${workspaceFolder}/apps/server; if (Test-Path .venv) { . .\\.venv\\Scripts\\Activate.ps1 }; python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload"
+				"cd ${workspaceFolder}/apps/server; if (Test-Path .venv) { . ./.venv/Scripts/Activate.ps1 }; python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload"
 			],
 			"presentation": {
 				"panel": "new",
@@ -33,19 +72,9 @@
 		},
 		{
 			"label": "dev: all",
-			"dependsOn": [
-				"backend: uvicorn",
-				"frontend: next dev"
-			],
+			"dependsOn": ["backend: uvicorn","frontend: next dev"],
 			"dependsOrder": "parallel",
 			"problemMatcher": []
-		},
-		{
-			"label": "dev:webapp",
-			"type": "shell",
-			"command": "pwsh -NoProfile -Command \"cd C:\\Users\\CraftAuto-Sales\\trk\\webapp\\app; npm run dev\"",
-			"isBackground": true,
-			"group": "build"
 		}
 	]
 }

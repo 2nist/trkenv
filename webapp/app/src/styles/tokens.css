@@ -198,11 +198,19 @@
   /* Palette */
   --bg: #0b0b0c;
   --fg: #f5f7fa;
+  /* Ensure commonly used app variables exist */
+  --text: #e6e8ee; /* light text for dark bg */
+  --surface: #141820; /* card/header */
+  --panel: #171c26; /* side panels */
   --primary: #6ee7b7;
   --secondary: #93c5fd;
   --muted: #9aa3af;
   --border: #2a2d33;
   --cream: #f8f5f0;
+
+  /* Accents used by buttons */
+  --accent-10: #2150ff;
+  --accent-9: #3a63ff;
 
   /* Radius */
   --radius-sm: 4px;

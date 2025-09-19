@@ -2,6 +2,7 @@
 
 **TRK Lab** is a minimal audio/music production platform built with FastAPI backend, Next.js frontend (with live CSS edit mode + theming), optional flow runner, and a JUCE desktop shell. It provides a plugin-based architecture for audio processing workflows and experiment/job management.
 
+[![CI](https://github.com/2nist/trkenv/actions/workflows/ci.yml/badge.svg)](https://github.com/2nist/trkenv/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Node.js 16+](https://img.shields.io/badge/node.js-16+-green.svg)](https://nodejs.org/)
@@ -57,6 +58,31 @@ TRK Lab/
 3. **Open your browser:**
    - Frontend: <http://localhost:3000>
    - API Docs: <http://localhost:8000/docs>
+
+### One-command local validation
+
+You can run an end-to-end check (start backend, run smoke, run pytest) with:
+
+```powershell
+pwsh -NoProfile -File scripts/run_all_checks.ps1
+```
+
+VS Code tasks (Terminal → Run Task):
+
+- `Smoke` — runs the API smoke test (expects backend running on `127.0.0.1:8000`).
+- `Test` — runs `pytest` using `.venv` if present (falls back to `python`).
+- `Smoke+Test` — runs the full local validation via the script above.
+- `backend: uvicorn` — starts the backend with auto-reload in a new panel.
+- `frontend: next dev` — starts the Next.js dev server.
+
+### CI
+
+GitHub Actions workflow `CI` runs on push/PR to `main`/`master`:
+
+- `tests` job: matrix on OS and Python (Ubuntu/Windows/macOS × 3.10/3.11/3.12), installs deps and runs pytest with coverage; publishes `coverage.xml` and `htmlcov/` as artifacts.
+- `smoke` job: runs on Ubuntu/Windows/macOS, generates a 1s WAV, starts the backend with `uvicorn`, waits for `/api/health`, runs the smoke script, uploads `uvicorn.log` on failure, and shuts down.
+
+After CI completes, download the coverage artifact named like `coverage-<os>-py<version>` to view `htmlcov/` and `coverage.xml`.
 
 ## 📚 API Documentation
 
@@ -244,6 +270,20 @@ npm run test:backend
 
 # Run frontend tests only
 npm run test:frontend
+```
+
+Run Python tests with coverage locally:
+
+```powershell
+python -m pip install pytest-cov
+pytest -q --cov=apps --cov=services --cov=scripts --cov-report=term-missing --cov-report=html
+# Open the HTML report:
+# Windows
+start .\htmlcov\index.html
+# macOS
+open ./htmlcov/index.html
+# Linux
+xdg-open ./htmlcov/index.html || true
 ```
 
 ## 🔌 Plugin System

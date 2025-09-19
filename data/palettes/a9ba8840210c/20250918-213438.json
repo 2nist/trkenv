@@ -1,0 +1,39 @@
+{
+  "id": "a9ba8840210c",
+  "experiment_id": "audio-engine",
+  "name": "My Canvas",
+  "nodes": [
+    {
+      "feature": "panel",
+      "component": "Chart",
+      "variant": "line",
+      "position": {
+        "x": 15,
+        "y": 25
+      },
+      "size": {
+        "w": 320,
+        "h": 200
+      },
+      "props_overrides": {
+        "title": "Hello"
+      },
+      "style_overrides": {
+        "color": "red"
+      },
+      "tags": [
+        "demo"
+      ],
+      "id": "0d700bd6"
+    }
+  ],
+  "groups": [],
+  "grid_size": 8,
+  "snap": true,
+  "zoom": 1.0,
+  "viewport": {
+    "x": 0,
+    "y": 0
+  },
+  "meta": {}
+}
