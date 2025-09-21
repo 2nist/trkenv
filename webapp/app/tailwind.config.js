@@ -1,4 +1,28 @@
 /** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './src/**/*.{js,ts,jsx,tsx}',
+    './app/**/*.{js,ts,jsx,tsx}',
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}'
+  ],
+  theme: {
+    extend: {
+      colors: {
+        brand: 'var(--color-brand, #2563eb)',
+        bg: 'var(--bg)',
+        text: 'var(--text)'
+      },
+      fontFamily: {
+        typewriter: ['var(--font-typewriter)'],
+        handwritten: ['var(--font-handwritten)'],
+        dymo: ['var(--font-dymo)']
+      }
+    }
+  },
+  plugins: []
+}
+/** @type {import('tailwindcss').Config} */
 const config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx}",
