@@ -36,6 +36,9 @@ wheels/
 !webapp/app/src/lib/
 !webapp/app/src/lib/*.ts
 !webapp/app/src/lib/*.tsx
+# Allow committing server models package
+!apps/server/models/
+!apps/server/models/*.py
 # IDE / build (added from upstream)
 .vscode/
 *.sln
