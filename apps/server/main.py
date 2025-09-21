@@ -18,6 +18,7 @@ from services.sdk_py.base import RunContext
 from fastapi.staticfiles import StaticFiles
 from services.lyrics_source import resolve_lyrics
 from apps.server.models.palette import CanvasDoc, XY, Size, Node, Group  # type: ignore
+from apps.server.models.canvas import PaletteCreate, PalettePatch, NodeCreate, NodePatch, RestoreRequest  # type: ignore
 try:
     from services.song_index import song_index as build_song_indices  # type: ignore
 except Exception:
@@ -1442,6 +1443,16 @@ def _now_iso():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 def _default_canvas_doc(palette_id: str, name: str, experiment_id: str | None = None) -> dict:
+    """Return a minimal CanvasDoc-like dict for a newly-created palette.
+
+    This function returns a plain dict suitable for storing in the `palettes`
+    table `doc_json` column. It intentionally mirrors the fields of
+    `apps.server.models.canvas.CanvasDoc` but does not instantiate the Pydantic
+    model to keep DB interactions simple and avoid dependency cycles.
+
+    Returns:
+      dict: minimal canvas document with keys like id, name, nodes, groups, zoom.
+    """
     return {
         "id": palette_id,
         "experiment_id": experiment_id,
@@ -1456,6 +1467,11 @@ def _default_canvas_doc(palette_id: str, name: str, experiment_id: str | None = 
     }
 
 def _palette_get_row(palette_id: str) -> dict | None:
+    """Fetch a palette row from the DB and parse the stored JSON doc.
+
+    The returned dict has keys: id, experiment_id, name, doc (dict), created_at, updated_at
+    where `doc` is a parsed dict that follows the CanvasDoc shape.
+    """
     conn = get_db_conn(); cur = conn.cursor()
     cur.execute("SELECT id, experiment_id, name, doc_json, created_at, updated_at FROM palettes WHERE id = ?", (palette_id,))
     r = cur.fetchone(); conn.close()
@@ -1469,6 +1485,16 @@ def _palette_get_row(palette_id: str) -> dict | None:
     return row
 
 def _palette_save_row(palette_id: str, doc: dict, name: str | None = None, experiment_id: str | None = None) -> dict:
+    """Upsert a palette row using the provided `doc` dict.
+
+    Parameters:
+      palette_id: str - unique palette id
+      doc: dict - parsed CanvasDoc-like dict to store in doc_json
+      name: optional display name override
+      experiment_id: optional experiment id to associate
+
+    Returns a dict summarizing the saved row (id, doc, name, experiment_id, updated_at).
+    """
     now = _now_iso()
     conn = get_db_conn(); cur = conn.cursor()
     # Upsert
@@ -1496,10 +1522,10 @@ def palette_list():
     return {"items": items, "total": len(items)}
 
 @app.post("/api/palettes")
-def palette_create(body: Dict[str, Any]):
+def palette_create(body: PaletteCreate):
     pid = uuid.uuid4().hex[:12]
-    name = body.get("name") or f"Canvas {pid}"
-    exp = body.get("experiment_id")
+    name = body.name or f"Canvas {pid}"
+    exp = body.experiment_id
     doc = _default_canvas_doc(pid, name, exp)
     row = _palette_save_row(pid, doc, name=name, experiment_id=exp)
     return {"id": pid, "doc": row["doc"], "name": name, "experiment_id": exp}
@@ -1516,7 +1542,7 @@ def palette_get(palette_id: str):
     return resp
 
 @app.patch("/api/palettes/{palette_id}")
-def palette_patch(palette_id: str, body: Dict[str, Any], if_match: str | None = Header(default=None, alias="If-Match")):
+def palette_patch(palette_id: str, body: PalettePatch, if_match: str | None = Header(default=None, alias="If-Match")):
     row = _palette_get_row(palette_id)
     if not row:
         raise HTTPException(404, "palette not found")
@@ -1526,13 +1552,15 @@ def palette_patch(palette_id: str, body: Dict[str, Any], if_match: str | None = 
     doc = row["doc"] or {}
     # Shallow updates for top-level fields
     for k in ("name", "experiment_id", "grid_size", "snap", "zoom", "viewport", "meta"):
-        if k in body:
-            doc[k] = body[k]
+        val = getattr(body, k, None)
+        if val is not None:
+            doc[k] = val
     # Full replacement of arrays if provided
-    if "nodes" in body and isinstance(body["nodes"], list):
-        doc["nodes"] = body["nodes"]
-    if "groups" in body and isinstance(body["groups"], list):
-        doc["groups"] = body["groups"]
+    if getattr(body, "nodes", None) is not None:
+        # convert Pydantic Node objects to plain dicts (Pydantic v2: model_dump)
+        doc["nodes"] = [n.model_dump() for n in body.nodes]
+    if getattr(body, "groups", None) is not None:
+        doc["groups"] = [g.model_dump() for g in body.groups]
     saved = _palette_save_row(palette_id, doc, name=doc.get("name"), experiment_id=doc.get("experiment_id"))
     resp = Response(content=json.dumps({"id": palette_id, "doc": doc}), media_type="application/json")
     if saved.get("updated_at"):
@@ -1553,23 +1581,24 @@ def _find_node(nodes: list[dict], node_id: str) -> int:
     return -1
 
 @app.post("/api/palettes/{palette_id}/nodes")
-def palette_add_node(palette_id: str, body: Dict[str, Any]):
+def palette_add_node(palette_id: str, body: NodeCreate):
     row = _palette_get_row(palette_id)
     if not row:
         raise HTTPException(404, "palette not found")
     doc = row["doc"] or {}
     nodes = doc.setdefault("nodes", [])
-    nid = body.get("id") or uuid.uuid4().hex[:8]
-    body["id"] = nid
-    nodes.append(body)
+    nid = body.id or uuid.uuid4().hex[:8]
+    node_obj = body.model_dump()
+    node_obj["id"] = nid
+    nodes.append(node_obj)
     saved = _palette_save_row(palette_id, doc, name=doc.get("name"), experiment_id=doc.get("experiment_id"))
-    resp = Response(content=json.dumps(body), media_type="application/json")
+    resp = Response(content=json.dumps(node_obj), media_type="application/json")
     if saved.get("updated_at"):
         resp.headers["ETag"] = saved["updated_at"]
     return resp
 
 @app.patch("/api/palettes/{palette_id}/nodes/{node_id}")
-def palette_patch_node(palette_id: str, node_id: str, body: Dict[str, Any], if_match: str | None = Header(default=None, alias="If-Match")):
+def palette_patch_node(palette_id: str, node_id: str, body: NodePatch, if_match: str | None = Header(default=None, alias="If-Match")):
     row = _palette_get_row(palette_id)
     if not row:
         raise HTTPException(404, "palette not found")
@@ -1582,7 +1611,7 @@ def palette_patch_node(palette_id: str, node_id: str, body: Dict[str, Any], if_m
     if idx < 0:
         raise HTTPException(404, "node not found")
     node = nodes[idx]
-    for k, v in body.items():
+    for k, v in body.model_dump(exclude_unset=True).items():
         if k == "id":
             continue
         node[k] = v
@@ -1635,7 +1664,7 @@ def palette_list_snapshots(palette_id: str, limit: int = 50, offset: int = 0):
     return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 @app.post("/api/palettes/{palette_id}/restore")
-def palette_restore(palette_id: str, body: Dict[str, Any]):
+def palette_restore(palette_id: str, body: RestoreRequest):
     """Restore a palette from a snapshot file.
 
     Body parameters:
@@ -1646,8 +1675,8 @@ def palette_restore(palette_id: str, body: Dict[str, Any]):
     if not row:
         raise HTTPException(404, "palette not found")
 
-    ts = body.get("ts")
-    path = body.get("path")
+    ts = body.ts
+    path = body.path
     fp: Path
     if ts:
         fp = (PALETTES_DIR / palette_id / f"{ts}.json")

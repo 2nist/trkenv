@@ -41,7 +41,8 @@ TRK Lab/
    ```bash
    git clone https://github.com/2nist/trkenv.git
    cd trkenv
-   .\scripts\setup_dev.ps1
+   # Windows PowerShell helper exists (scripts/setup_dev.ps1). For macOS/Linux:
+   ./scripts/setup_local.sh
    ```
 
 2. **Start development servers:**

@@ -1,0 +1,30 @@
+{
+  "id": "2efe38960149",
+  "experiment_id": "audio-engine",
+  "name": "API Canvas",
+  "nodes": [
+    {
+      "id": "b7323e09",
+      "feature": "kick",
+      "component": "Button",
+      "variant": null,
+      "position": {
+        "x": 10.0,
+        "y": 20.0
+      },
+      "size": null,
+      "props_overrides": null,
+      "style_overrides": null,
+      "tags": null
+    }
+  ],
+  "groups": [],
+  "grid_size": 8,
+  "snap": true,
+  "zoom": 1.0,
+  "viewport": {
+    "x": 0,
+    "y": 0
+  },
+  "meta": {}
+}

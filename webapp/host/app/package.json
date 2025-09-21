@@ -5,9 +5,13 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "dev:host": "next dev -p 3001 -H 0.0.0.0",
+    "dev:backend": "sh ../../../scripts/dev-backend.sh",
+    "dev:all": "sh ../../../scripts/wait-for-backend.sh http://127.0.0.1:8000/api/health 3 || true && concurrently \"npm:dev:backend\" \"npm:dev\" -k -n backend,frontend",
     "build": "next build",
     "start": "next start -p 3000",
-    "start:host": "next start -p 3001"
+    "start:host": "next start -p 3001",
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@types/formidable": "^3.4.5",
@@ -22,6 +26,8 @@
   "devDependencies": {
     "@types/node": "24.3.1",
     "@types/react": "19.1.12",
+    "concurrently": "7.6.0",
+    "@playwright/test": "1.43.0",
     "autoprefixer": "10.4.20",
     "postcss": "8.4.47",
     "tailwindcss": "3.4.13",

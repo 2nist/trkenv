@@ -1,0 +1,7 @@
+.container { padding: 18px }
+.header { display:flex; align-items:center; gap:12px }
+.meta { color:#666 }
+.controls { margin-top:12px; display:flex; gap:8px; align-items:center }
+.doc { margin-top:12px; background:#f6f8fa; padding:12px; border-radius:6px; max-height:400px; overflow:auto }
+.msg { margin-top:8px; color:#0b6 }
+.error { color: crimson }

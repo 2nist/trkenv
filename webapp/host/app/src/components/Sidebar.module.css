@@ -1,0 +1,4 @@
+.sidebar { width:200px; background:#0f172a; color:#e6eef8; padding:12px }
+.brand { font-weight:700; margin-bottom:12px }
+.sidebar ul { list-style:none; padding:0; margin:0 }
+.sidebar a { color:inherit; text-decoration:none }

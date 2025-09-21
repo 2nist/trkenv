@@ -49,5 +49,6 @@ def save_timeline_config(song_id: str, payload: TimelineConfig):
     if payload.song_id != song_id:
         raise HTTPException(status_code=400, detail={"code": "song_mismatch", "message": "song_id mismatch"})
     rel = artifact_relpath("timeline", song_id, None, "config.json")
-    write_text(rel, json.dumps(payload.model_dump(mode="json"), indent=2))
+    # Use Pydantic v2 JSON helper for deterministic JSON export
+    write_text(rel, payload.model_dump_json(indent=2))
     return payload

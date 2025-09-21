@@ -1,0 +1,14 @@
+--require-hashes
+fastapi
+uvicorn
+pydantic
+PyYAML
+jsonschema
+requests
+# test & dev extras
+pytest
+pytest-cov
+httpx
+python-multipart
+eval_type_backport
+typing_extensions

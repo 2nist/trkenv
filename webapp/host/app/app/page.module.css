@@ -1,0 +1,26 @@
+.root {
+  padding: 24px;
+  font-family: sans-serif;
+}
+.section {
+  margin-top: 18px;
+}
+.error {
+  color: crimson;
+}
+.statusBox {
+  background: #f6f8fa;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+.lead {
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.statusHeaderSmall {
+  margin-left: 12px;
+  font-size: 12px;
+  vertical-align: middle;
+}
