@@ -31,7 +31,7 @@ export function BarRuler({
   }, [widthPx, ticks]);
 
   return (
-    <div className="relative h-6 bg-slate-900/70 border border-border rounded">
+    <div className="relative h-12 bg-slate-900/70 border border-border rounded">
       <div ref={wrapperRef} className="relative h-full timeline-wrapper">
         {ticks.map((t, i) => (
           <div key={i} ref={(el) => { tickRefs.current[i] = el; }} className="absolute top-0 bottom-0 var-left">

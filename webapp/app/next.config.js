@@ -16,6 +16,16 @@ const nextConfig = {
     // Safe fallback prevents path.relative(undefined) crashes in dev
     outputFileTracingRoot: tracingRoot,
   },
+  webpack: (config, { isServer }) => {
+    // Fix for @mediabunny/mp3-encoder trying to import worker_threads in browser
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        worker_threads: false,
+      };
+    }
+    return config;
+  },
   async redirects() {
     return [
       // Removed automatic redirect from / to /songs

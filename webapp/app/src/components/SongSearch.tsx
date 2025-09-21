@@ -1,4 +1,7 @@
+'use client'
+
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 
 // Mock data for Storybook
 const mockSongs = [
@@ -9,6 +12,7 @@ const mockSongs = [
 ]
 
 export function SongSearch() {
+  const router = useRouter()
   const [q, setQ] = useState('')
   const [songs, setSongs] = useState<any[]>([])
   const [selected, setSelected] = useState<any | null>(null)
@@ -18,7 +22,9 @@ export function SongSearch() {
   // Check if we're in Storybook environment
   const isStorybook = typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port === '6006'
 
-  const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'
+  // Prefer build-time env; fall back to same host on 8010, then localhost:8010
+  const API = process.env.NEXT_PUBLIC_API_BASE
+    || (typeof window !== 'undefined' ? `http://${window.location.hostname}:8010` : 'http://127.0.0.1:8010')
 
   async function fetchSongs() {
     setLoading(true)
@@ -52,59 +58,59 @@ export function SongSearch() {
   useEffect(() => { fetchSongs() }, [])
 
   return (
-    <div className="p-3 border rounded bg-white">
+    <div className="p-3 border rounded bg-[color:var(--surface,#0f1216)] text-[color:var(--text,#f5f5f5)] border-[color:var(--border,#2a2d33)]">
       <div className="flex gap-2">
-        <input className="border p-1 flex-1" value={q} onChange={e => setQ(e.target.value)} placeholder="search" />
+        <input
+          className="border border-[color:var(--border,#2a2d33)] bg-[color:var(--surface,#15191f)] text-[color:var(--text,#f5f5f5)] placeholder-[color:var(--muted,#9aa2ad)] p-1 flex-1 rounded"
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="search"
+        />
         <button className="btn-tape" onClick={fetchSongs}>Search</button>
       </div>
       {isStorybook && (
-        <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+        <div className="mt-2 text-xs p-2 rounded bg-[color:var(--surface,#15191f)] text-[color:var(--muted,#9aa2ad)]">
           📚 Running in Storybook - using mock data
         </div>
       )}
       <div className="mt-3">
-        {loading && <div className="text-sm text-gray-600">Loading…</div>}
-        {error && <div className="text-sm text-red-600">{error}</div>}
+        {loading && <div className="text-sm text-[color:var(--muted,#9aa2ad)]">Loading…</div>}
+        {error && <div className="text-sm text-red-400">{error}</div>}
         {songs.map(s => (
-          <div key={s.id} className="p-2 border-b flex justify-between items-center">
+          <div key={s.id} className="p-2 border-b border-[color:var(--border,#2a2d33)] flex justify-between items-center">
             <div>
               <div className="font-dymo">{s.title}</div>
-              <div className="text-sm text-gray-600">{s.artist || s.id}</div>
+              <div className="text-sm text-[color:var(--muted,#9aa2ad)]">{s.artist || s.id}</div>
             </div>
-            <div>
+            <div className="flex items-center gap-2">
+              <button className="btn-tape" onClick={() => router.push(`/timeline-cps/${s.id}`)}>Open</button>
               <button className="btn-tape" onClick={async ()=>{
+                // Optional inline preview
                 try {
                   setLoading(true); setError(null)
                   if (isStorybook) {
-                    // Mock song details for Storybook
-                    setSelected({
-                      id: s.id,
-                      title: s.title,
-                      artist: s.artist,
-                      source: { mock: true, environment: 'storybook' }
-                    })
+                    setSelected({ id: s.id, title: s.title, artist: s.artist, source: { mock: true, environment: 'storybook' } })
                   } else {
-                    // Real API call for production
                     const r = await fetch(`${API}/songs/${s.id}`)
                     if (!r.ok) throw new Error(`HTTP ${r.status}`)
                     setSelected(await r.json())
                   }
                 } catch (err: any) {
-                  console.error('open song failed', err)
+                  console.error('preview song failed', err)
                   setError(String(err?.message || err))
                 } finally { setLoading(false) }
-              }}>Open</button>
+              }}>Preview</button>
             </div>
           </div>
         ))}
       </div>
 
       {selected && (
-        <div className="mt-3 p-2 border rounded bg-gray-50">
+        <div className="mt-3 p-2 border rounded bg-[color:var(--surface,#15191f)] border-[color:var(--border,#2a2d33)] text-[color:var(--text,#f5f5f5)]">
           <h4 className="font-dymo">{selected.title}</h4>
           <pre className="text-xs">{JSON.stringify(selected.source, null, 2)}</pre>
             <div className="mt-2">
-            <input id="tag" className="border p-1 mr-2" placeholder="new tag" />
+            <input id="tag" className="border border-[color:var(--border,#2a2d33)] bg-[color:var(--surface,#0f1216)] text-[color:var(--text,#f5f5f5)] placeholder-[color:var(--muted,#9aa2ad)] p-1 mr-2 rounded" placeholder="new tag" />
             <button className="btn-tape" onClick={async ()=>{
               const el = (document.getElementById('tag') as HTMLInputElement)
               const tag = el?.value

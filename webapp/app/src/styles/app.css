@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* Semantic tokens (indirection variables map to Tailwind tokens) */
+@theme {
+  --color-bg: var(--bg, white);
+  --color-fg: var(--fg, oklch(0.20 0.03 257));
+  --color-muted: var(--muted, oklch(0.96 0.01 257));
+  --color-brand-600: var(--brand-600, oklch(0.62 0.16 265));
+  --font-sans: var(--font-body, ui-sans-serif, system-ui, "Inter", sans-serif);
+  --radius-md: var(--radius-md, 0.5rem);
+  --shadow-card: var(--shadow-card, 0 1px 2px rgb(0 0 0 / 0.08));
+}
+
+/* Legacy variable shims for existing components */
+:root {
+  /* Map old tokens to new */
+  --text: var(--fg);
+  /* Provide simple panel/surface defaults derived from bg */
+  --panel: color-mix(in oklab, var(--color-bg) 98%, black 2%);
+  --surface: color-mix(in oklab, var(--color-bg) 96%, black 4%);
+  --border: #2a2d33;
+}
+
+/* Map semantic tokens to utility hooks */
+.bg-bg { background-color: var(--color-bg); }
+.text-fg { color: var(--color-fg); }
+.bg-muted { background-color: var(--color-muted); }
+
+/* Minimal utilities */
+.card {
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  box-shadow: var(--shadow-card);
+  padding: 1rem;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  height: 2.5rem; /* 40px */
+  padding-inline: 1rem; /* 16px */
+  background-color: var(--color-brand-600);
+  color: #fff;
+  transition: opacity 150ms ease;
+}
+.btn:hover { opacity: 0.95; }
+.btn:active { opacity: 0.9; }
+.btn:focus { outline: none; }
+.btn:focus-visible { box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-brand-600) 50%, transparent); }
+
+/* Theme imports removed - themes are archived. Tokens are still included via globals.css */

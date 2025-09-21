@@ -85,8 +85,13 @@ if (savedTheme) {
 // pages/theme-editor.tsx
 import ThemeEditorDemo from '../components/ThemeEditorDemo';
 
+// NOTE: The Theme Editor has been archived. The original interactive editor
+// and related assets were moved to `webapp/theme-archive/`. The project now
+// keeps minimal no-op shims to avoid breaking imports; Tailwind tokens remain
+// the canonical source of runtime design variables.
+
 export default function ThemeEditorPage() {
-  return <ThemeEditorDemo />;
+  return <div>The Theme Editor has been archived. See webapp/theme-archive/</div>;
 }
 ```
 

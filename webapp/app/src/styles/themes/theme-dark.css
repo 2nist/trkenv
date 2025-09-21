@@ -1,0 +1,13 @@
+/* Theme: Ink Dark */
+
+.theme-inkdark {
+  --bg: oklch(0.17 0.02 257);
+  --fg: oklch(0.92 0.02 257);
+  --muted: oklch(0.21 0.02 257);
+  --brand-600: oklch(0.72 0.16 265);
+  --radius-md: 0.5rem;
+  --shadow-card: 0 1px 0 rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.35);
+}
+
+.theme-inkdark body { background: var(--bg); color: var(--fg); }
+.theme-inkdark .app-header, .theme-inkdark .app-sidebar { background: oklch(0.14 0.02 257); }

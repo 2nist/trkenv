@@ -6,6 +6,7 @@ import { SectionRail } from "@/components/SectionRail";
 import { ChordLane } from "@/components/ChordLane";
 import { BarRuler } from "@/components/BarRuler";
 import { LyricLane } from "@/components/LyricLane";
+import { WaveformRail } from "@/components/timeline/WaveformRail";
 import TimelineFooter from "@/components/timeline/TimelineFooter";
 // LrcAttachButton panel removed in favor of a clean header; reintroduce later as needed.
 
@@ -99,6 +100,17 @@ export default function CylindricalTimelinePage() {
     } catch { return false; }
   }, [router.query]);
 
+  // Check if this is a recording (has audio assets) - don't show demo data for recordings
+  const hasAudioAssets = React.useMemo(() => {
+    const assets = doc?.assets || doc?.source?.assets || {};
+    return Object.keys(assets).some(key => 
+      key.toLowerCase().includes('audio') || 
+      (typeof assets[key] === 'string' && assets[key].toLowerCase().includes('.wav')) ||
+      (typeof assets[key] === 'string' && assets[key].toLowerCase().includes('.mp3')) ||
+      (typeof assets[key] === 'string' && assets[key].toLowerCase().includes('.webm'))
+    );
+  }, [doc]);
+
   const demoSections: { id: string; name: string; startBeat: number; lengthBeats: number; color: string }[] = [
     { id: "1", name: "Intro", startBeat: 0, lengthBeats: 16, color: "#8B5CF6" },
     { id: "2", name: "Verse 1", startBeat: 16, lengthBeats: 32, color: "#10B981" },
@@ -128,9 +140,23 @@ export default function CylindricalTimelinePage() {
     { text: "song", beat: 24 },
   ];
 
-  const effSections = (demoFlag || sections.length === 0) ? demoSections : sections;
-  const effChords = (demoFlag || chords.length === 0) ? demoChords : chords;
-  const effLyrics = (demoFlag || lyrics.length === 0) ? demoLyrics : lyrics;
+  // Get audio URL from assets
+  const audioUrl = React.useMemo(() => {
+    const assets = doc?.assets || doc?.source?.assets || {};
+    for (const [key, value] of Object.entries(assets)) {
+      if (key.toLowerCase().includes('audio') && typeof value === 'string') {
+        return value;
+      }
+      if (typeof value === 'string' && (value.toLowerCase().includes('.wav') || value.toLowerCase().includes('.mp3') || value.toLowerCase().includes('.webm'))) {
+        return value;
+      }
+    }
+    return undefined;
+  }, [doc]);
+
+  const effSections = (demoFlag || (sections.length === 0 && !hasAudioAssets)) ? demoSections : sections;
+  const effChords = (demoFlag || (chords.length === 0 && !hasAudioAssets)) ? demoChords : chords;
+  const effLyrics = (demoFlag || (lyrics.length === 0 && !hasAudioAssets)) ? demoLyrics : lyrics;
 
   const totalBeats = useMemo(() => {
     if (!effChords.length && !effSections.length) return beatsPerBar * 16; // Default length
@@ -478,7 +504,7 @@ export default function CylindricalTimelinePage() {
   return (
   <div className="fixed inset-0 cylindrical-timeline no-cylinder-bg overflow-hidden select-none touch-none">
       {/* Top header: title, positions, and Load Song */}
-      <header className="fixed top-0 left-0 right-0 min-h-14 bg-white text-black border-b border-black/10 shadow-sm z-[10001]">
+      <header className="fixed top-0 left-0 right-0 min-h-14 border-b border-black/10 shadow-sm z-[10001]" style={{backgroundColor: '#ffffff', color: '#000000'}}>
         <div className="px-4 py-1 flex flex-wrap items-center gap-2 justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <h1 className="m-0 font-typewriter font-bold text-base truncate max-w-[28ch] text-black" title={(doc?.title || (demoFlag ? 'Demo Song' : 'Untitled'))}>{doc?.title || (demoFlag ? 'Demo Song' : 'Untitled')}</h1>
@@ -523,7 +549,7 @@ export default function CylindricalTimelinePage() {
             {/* Zoom controls */}
             <div className="flex items-center gap-1">
               <button onClick={() => setZoom(z => Math.max(8, z - 4))} className="btn-tape-sm" aria-label="Zoom out">-</button>
-              <span className="text-xs font-typewriter text-black/70 w-10 text-center">{zoom}px</span>
+              <span className="text-xs font-typewriter w-10 text-center" style={{color: '#000000'}}>{zoom}px</span>
               <button onClick={() => setZoom(z => Math.min(64, z + 4))} className="btn-tape-sm" aria-label="Zoom in">+</button>
               <button onClick={() => setZoom(16)} className="btn-tape-sm" aria-label="Reset zoom">Reset</button>
             </div>
@@ -581,7 +607,7 @@ export default function CylindricalTimelinePage() {
             {/* Scroll readout (debug) */}
             {mode === 'timeline' && (
               <div className="flex items-center gap-1">
-                <span className="text-xs font-typewriter text-black/70">ScrollX: {Math.round(scrollX)}</span>
+                <span className="text-xs font-typewriter" style={{color: '#000000'}}>ScrollX: {Math.round(scrollX)}</span>
               </div>
             )}
             {/* Centering toggle (timeline only) */}
@@ -613,34 +639,38 @@ export default function CylindricalTimelinePage() {
       </header>
       {/* Center area: conditional based on mode */}
       {mode === 'plain' ? (
-        <div className="absolute left-0 right-0 top-14 offset-bottom-footer">
+        <div className="absolute left-0 right-0 top-16 offset-bottom-footer">
           <div className="max-w-full h-full overflow-auto p-4">
-            <div className="space-y-3">
-              <div className="ring-2 ring-red-500/70 rounded-sm bg-red-600/30 py-2">
-                <div className="text-xs font-typewriter text-white/90 px-2">SectionRail (plain)</div>
+            <div className="space-y-2">
+              <div className="ring-2 ring-purple-500/70 rounded-sm bg-purple-600/30 py-1" title="WaveformRail (plain)">
+                <div className="text-[3px] font-typewriter text-white/90 px-2 opacity-0 hover:opacity-100 transition-opacity">WaveformRail (plain)</div>
+                <WaveformRail zoom={zoom} totalBeats={totalBeats} audioUrl={audioUrl} laneOffset={0} depthBlur={0} />
+              </div>
+              <div className="ring-2 ring-red-500/70 rounded-sm bg-red-600/30 py-1" title="SectionRail (plain)">
+                <div className="text-[3px] font-typewriter text-white/90 px-2 opacity-0 hover:opacity-100 transition-opacity">SectionRail (plain)</div>
                 <SectionRail sections={effSections} zoom={zoom} totalBeats={totalBeats} laneOffset={0} depthBlur={0} />
               </div>
-              <div className="ring-2 ring-yellow-500/70 rounded-sm bg-yellow-600/30 py-2">
-                <div className="text-xs font-typewriter text-black/90 px-2">BarRuler (plain)</div>
+              <div className="ring-2 ring-yellow-500/70 rounded-sm bg-yellow-600/30 py-1" title="BarRuler (plain)">
+                <div className="text-[3px] font-typewriter text-white/90 px-2 opacity-0 hover:opacity-100 transition-opacity">BarRuler (plain)</div>
                 <BarRuler beatsPerBar={beatsPerBar} totalBeats={totalBeats} zoom={zoom} />
               </div>
-              <div className="ring-2 ring-green-500/70 rounded-sm bg-green-600/30 py-2">
-                <div className="text-xs font-typewriter text-black/90 px-2">ChordLane (plain)</div>
+              <div className="ring-2 ring-green-500/70 rounded-sm bg-green-600/30 py-1" title="ChordLane (plain)">
+                <div className="text-[3px] font-typewriter text-white/90 px-2 opacity-0 hover:opacity-100 transition-opacity">ChordLane (plain)</div>
                 <ChordLane chords={effChords} zoom={zoom} beatsPerBar={beatsPerBar} totalBeats={totalBeats} laneOffset={0} depthBlur={0} itemHeight={itemHeight} />
               </div>
-              <div className="ring-2 ring-blue-500/70 rounded-sm bg-blue-600/30 py-2">
-                <div className="text-xs font-typewriter text-black/90 px-2">LyricLane (plain)</div>
+              <div className="ring-2 ring-blue-500/70 rounded-sm bg-blue-600/30 py-1" title="LyricLane (plain)">
+                <div className="text-[3px] font-typewriter text-white/90 px-2 opacity-0 hover:opacity-100 transition-opacity">LyricLane (plain)</div>
                 <LyricLane lyrics={effLyrics} zoom={zoom} beatsPerBar={beatsPerBar} totalBeats={totalBeats} laneOffset={0} depthBlur={0} itemHeight={itemHeight} />
               </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="absolute left-0 right-0 top-14 offset-bottom-footer">
+        <div className="absolute left-0 right-0 top-16 offset-bottom-footer">
           <div className="relative h-full">
             {/* Debug HUD */}
-            <div className="absolute top-2 left-2 z-[10002] bg-black/70 text-white text-[11px] font-typewriter px-2 py-1 rounded">
-              secs: {rotatingContent.sections?.length || 0} | chords: {rotatingContent.chords?.length || 0} | lyrics: {rotatingContent.lyrics?.length || 0}
+            <div className="absolute top-2 left-2 z-[10002] bg-black/70 text-white text-[3px] font-typewriter px-2 py-1 rounded">
+              secs: {rotatingContent.sections?.length || 0} | chords: {rotatingContent.chords?.length || 0} | lyrics: {rotatingContent.lyrics?.length || 0} | audio: {audioUrl ? 'yes' : 'no'}
             </div>
             {/* Playhead line */}
             <div className="cylindrical-playhead" />
@@ -658,23 +688,27 @@ export default function CylindricalTimelinePage() {
             {/* Moving content; centering can be toggled. Scroll stays enabled as fallback. */}
             <div ref={scrollRef} className="timeline-scroll z-20 h-full">
               <div ref={contentRef} className={`relative timeline-content ${centerEnabled ? '' : 'no-translate'} h-full`}>
-              <div className="flex flex-col items-stretch h-full space-y-3 p-4 pt-6">
+              <div className="flex flex-col items-stretch h-full space-y-2 p-4 pt-6">
                 {/* Fixed baseline to visualize top alignment */}
-                <div className="sticky top-0 z-30 h-6 bg-black/20 text-white text-[11px] font-typewriter px-2 flex items-center rounded">Timeline Top</div>
-                <div className="ring-2 ring-red-500/70 rounded-sm bg-red-600/30 py-2">
-                  <div className="text-xs font-typewriter text-white/90 px-2">SectionRail (timeline)</div>
+                <div className="sticky top-0 z-30 h-6 bg-black/20 text-white text-[3px] font-typewriter px-2 flex items-center rounded">Timeline Top</div>
+                <div className="ring-2 ring-purple-500/70 rounded-sm bg-purple-600/30 py-1" title="WaveformRail (timeline)">
+                  <div className="text-[3px] font-typewriter text-white/90 px-2 opacity-0 hover:opacity-100 transition-opacity">WaveformRail (timeline)</div>
+                  <WaveformRail zoom={zoom} totalBeats={extendedTotalBeats} audioUrl={audioUrl} laneOffset={0} depthBlur={0} />
+                </div>
+                <div className="ring-2 ring-red-500/70 rounded-sm bg-red-600/30 py-1" title="SectionRail (timeline)">
+                  <div className="text-[3px] font-typewriter text-white/90 px-2 opacity-0 hover:opacity-100 transition-opacity">SectionRail (timeline)</div>
                   <SectionRail sections={rotatingContent.sections} zoom={zoom} totalBeats={extendedTotalBeats} laneOffset={0} depthBlur={0} />
                 </div>
-                <div className="ring-2 ring-yellow-500/70 rounded-sm bg-yellow-600/30 py-2">
-                  <div className="text-xs font-typewriter text-black/90 px-2">BarRuler (timeline)</div>
+                <div className="ring-2 ring-yellow-500/70 rounded-sm bg-yellow-600/30 py-1" title="BarRuler (timeline)">
+                  <div className="text-[3px] font-typewriter text-white/90 px-2 opacity-0 hover:opacity-100 transition-opacity">BarRuler (timeline)</div>
                   <BarRuler beatsPerBar={beatsPerBar} totalBeats={extendedTotalBeats} zoom={zoom} />
                 </div>
-                <div className="ring-2 ring-green-500/70 rounded-sm bg-green-600/30 py-2">
-                  <div className="text-xs font-typewriter text-black/90 px-2">ChordLane (timeline)</div>
+                <div className="ring-2 ring-green-500/70 rounded-sm bg-green-600/30 py-1" title="ChordLane (timeline)">
+                  <div className="text-[3px] font-typewriter text-white/90 px-2 opacity-0 hover:opacity-100 transition-opacity">ChordLane (timeline)</div>
                   <ChordLane chords={rotatingContent.chords} zoom={zoom} beatsPerBar={beatsPerBar} totalBeats={extendedTotalBeats} laneOffset={0} depthBlur={0} itemHeight={itemHeight} />
                 </div>
-                <div className="ring-2 ring-blue-500/70 rounded-sm bg-blue-600/30 py-2">
-                  <div className="text-xs font-typewriter text-black/90 px-2">LyricLane (timeline)</div>
+                <div className="ring-2 ring-blue-500/70 rounded-sm bg-blue-600/30 py-1" title="LyricLane (timeline)">
+                  <div className="text-[3px] font-typewriter text-white/90 px-2 opacity-0 hover:opacity-100 transition-opacity">LyricLane (timeline)</div>
                   <LyricLane lyrics={rotatingContent.lyrics} zoom={zoom} beatsPerBar={beatsPerBar} totalBeats={extendedTotalBeats} laneOffset={0} depthBlur={0} itemHeight={itemHeight} />
                 </div>
               </div>

@@ -1,0 +1,69 @@
+/* Theme: Sharpie */
+
+@font-face {
+  font-family: "Sharpie";
+  src: url("/fonts/Sharpie-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Typewriter";
+  src: url("/fonts/Tox Typewriter.ttf") format("truetype");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root.theme-sharpie { --paper-texture: url("/textures/wrinkled-paper.png"); }
+
+.theme-sharpie {
+  --bg: #d2be75f1;
+  --fg: #000000;
+  --muted: #f3ead3;
+  --brand-600: #3b3b3b;
+  --radius-md: 0rem;
+  --shadow-card: 0 1px 0 rgba(0,0,0,.06);
+  --bg-page: #ce9652;
+  --bg-folder: #F1D592;
+  --bg-tape: #FFF9CE;
+  --font-body: "Typewriter", ui-monospace, SFMono-Regular, monospace;
+}
+
+.theme-sharpie body {
+  background: var(--paper-texture) repeat, var(--bg-page);
+  background-size: 800px auto, auto;
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+
+.theme-sharpie .app-header,
+.theme-sharpie .app-sidebar { background:#e1a8a8; color:#000; }
+
+.heading-ink {
+  font-family: "Sharpie", system-ui, -apple-system, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.paper-sheet {
+  background-color: var(--bg);
+  border-radius: 0;
+  box-shadow: 0 1px 0 rgba(0,0,0,.06);
+}
+.folder-panel {
+  background-color: var(--bg-folder);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 0 rgba(0,0,0,.18);
+}
+.tape-btn {
+  position: relative;
+  background-color: var(--bg-tape);
+  color: #000;
+  font-family: "Sharpie", system-ui, -apple-system, sans-serif;
+  text-transform: lowercase;
+  padding: 0.5rem 0.875rem; line-height: 1;
+  border-radius: 0.375rem;
+  box-shadow: 4px 4px 0 rgba(0,0,0,.25);
+  transition: transform .05s ease, box-shadow .05s ease;
+}
+.tape-btn:active { transform: translateY(1px); box-shadow: none; }

@@ -9,6 +9,8 @@ This folder contains the canonical theme assets for TRK:
 - `theme-loader.js` — canonical global loader (UMD-style) for script-based pages.
 - `theme-api.mjs` — ESM module exposing `trkLoadCurrent()` and `trkSetTheme()` for apps that can import it.
 
+NOTE: The theme editor, loader, and runtime theme API have been archived and replaced with no-op shims in this repository. See `webapp/theme-archive/` for original files. The runtime token system (canonical `tokens.css`) remains in use for Tailwind and CSS variables.
+
 Usage
 -----
 

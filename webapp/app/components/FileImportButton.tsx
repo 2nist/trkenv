@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useRef } from "react";
 
 interface SimpleImportProps {
@@ -17,7 +19,29 @@ export default function SimpleImport({ onSuccess }: SimpleImportProps) {
     setMessage('Importing...');
 
     try {
-      // Read the file
+      // Decide path by extension
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+      const lower = file.name.toLowerCase();
+      if (/(\.mp3|\.wav|\.ogg|\.webm|\.mid|\.midi)$/.test(lower)) {
+        const form = new FormData();
+        form.append('file', file, file.name);
+        const response = await fetch(`${apiBase}/api/songs/import`, { method: 'POST', body: form });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to import: ${response.status} ${errorText}`);
+        }
+        setStatus('success');
+        setMessage(`✓ Imported "${file.name.replace(/\.[^/.]+$/, '')}"`);
+        if (onSuccess) onSuccess();
+        setTimeout(() => {
+          setStatus('idle');
+          setMessage('');
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }, 2000);
+        return;
+      }
+
+      // Read the file (text-based import)
       const text = await file.text();
 
       let songData: any = {};
@@ -46,14 +70,7 @@ export default function SimpleImport({ onSuccess }: SimpleImportProps) {
         };
       }
 
-      // Send to backend
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
-      console.log('=== FileImportButton Debug ===');
-      console.log('API Base:', apiBase);
-      console.log('Sending to:', `${apiBase}/songs`);
-      console.log('Data:', songData);
-      console.log('Starting fetch...');
-
+      // Send to backend (JSON)
       const response = await fetch(`${apiBase}/songs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,7 +133,7 @@ export default function SimpleImport({ onSuccess }: SimpleImportProps) {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".jcrd,.json,.mid,.txt"
+          accept=".jcrd,.json,.mid,.midi,.mp3,.wav,.ogg,.webm,.txt"
           onChange={handleFileSelect}
           disabled={status === 'importing'}
           className="hidden"

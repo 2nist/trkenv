@@ -108,10 +108,26 @@ function Invoke-EnvFile {
 }
 
 function Ensure-Venv {
+	if (-not (Test-Path '.venv/')) {
+		Write-Host 'Creating Python virtual environment (.venv)...' -ForegroundColor Yellow
+		try {
+			python -m venv .venv
+		} catch {
+			try {
+				py -3 -m venv .venv
+			} catch {
+				Write-Host 'Failed to create virtual environment. Ensure Python 3 is installed and on PATH.' -ForegroundColor Red
+				return
+			}
+		}
+	}
 	if (Test-Path '.venv/Scripts/Activate.ps1') {
 		& .\.venv\Scripts\Activate.ps1
+		try {
+			python -m pip install --upgrade pip setuptools wheel | Out-Null
+		} catch {}
 	} else {
-		Write-Host 'Virtual environment not found (.venv). Consider running scripts/setup_dev.ps1' -ForegroundColor Yellow
+		Write-Host 'Virtual environment activation script not found (.venv\\Scripts\\Activate.ps1).' -ForegroundColor Red
 	}
 }
 
@@ -257,8 +273,8 @@ while (-not $script:StopRequested) {
 		}
 	}
 	Start-Sleep -Milliseconds 300
-	# Auto-exit if all processes died
-	if ($script:Procs.Count -gt 0 -and ($script:Procs | Where-Object { Get-Process -Id $_.PID -ErrorAction SilentlyContinue }).Count -eq 0) {
+	# Auto-exit if all processes died (use Measure-Object to avoid single-object .Count null)
+	if ((@($script:Procs).Count -gt 0) -and (((@($script:Procs | Where-Object { Get-Process -Id $_.PID -ErrorAction SilentlyContinue }) | Measure-Object).Count) -eq 0)) {
 		Write-Host "All services exited." -ForegroundColor Yellow
 		break
 	}

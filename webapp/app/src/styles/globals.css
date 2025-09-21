@@ -1,9 +1,7 @@
 /* Use local tokens for predictable editing in dev */
 @import "./tokens.css";
 @import "./button-variants.css";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4 is imported via app.css */
 
 /* --------------------------------------------------
    Font-face declarations and theme variables
@@ -91,16 +89,6 @@ body {
   border-radius: var(--radius-button, var(--radius-base, var(--border-radius, 8px)));
 }
 
-/* CSS Edit Mode highlight */
-.css-edit-hover {
-  outline: 2px solid #3b82f6 !important;
-  outline-offset: 2px !important;
-  cursor: pointer !important;
-}
-.css-edit-panel {
-  font-family: system-ui, sans-serif;
-}
-.css-edit-right-panel { width: var(--css-edit-panel-width, 360px); }
 .app-left-sidebar { width: var(--app-left-sidebar-width, 320px); }
 
 /* Special Elite font utility (used sparingly for headings) */
@@ -219,13 +207,12 @@ h4, h5, h6 { font-size: 14px; }
   color: var(--text);
 }
 
-.card {
-  @apply rounded-lg shadow p-4 border;
-  background-color: color-mix(in oklab, var(--bg) 90%, transparent);
-}
+/* .card utility is defined in app.css using Tailwind v4 CSS-first tokens */
 
 .btn {
-  @apply inline-flex items-center justify-center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background-color: var(--tape-bg);
   font-family: var(--font-handwritten);
   font-weight: 400;
@@ -748,3 +735,7 @@ h4, h5, h6 { font-size: 14px; }
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.1);
 }
+
+/* Karaoke highlighting sketch */
+.karaoke .word { opacity: 0.45; transition: opacity 120ms ease, color 120ms ease; }
+.karaoke .word.active { opacity: 1; color: var(--color-brand-600, #2563eb); text-shadow: 0 0 0.35rem color-mix(in oklab, currentColor 30%, transparent); }
