@@ -1,6 +1,12 @@
 /* Use local tokens for predictable editing in dev */
 @import "./tokens.css";
 @import "./button-variants.css";
+
+/* Tailwind directives (placed after token imports so variables are available) */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Tailwind v4 is imported via app.css */
 
 /* --------------------------------------------------
