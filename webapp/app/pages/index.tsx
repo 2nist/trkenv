@@ -18,13 +18,6 @@ export default function HomePage() {
             <Button
               variant="primary"
               size="lg"
-              onClick={() => router.push('/theme-editor-integration')}
-            >
-              Try Theme Editor
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
               onClick={() => router.push('/design')}
             >
               View Components
@@ -36,12 +29,12 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card variant="elevated" padding="lg" className="text-center bg-white">
             <div className="text-4xl mb-4 text-blue-500">■</div>
-            <Heading level={3} className="mb-2">Theme Editor</Heading>
+            <Heading level={3} className="mb-2">Component Library</Heading>
             <Text variant="small" className="text-gray-600 mb-4">
-              Customize your design system with our integrated theme editor in the left sidebar
+              Pre-built components using your design tokens for consistent UI
             </Text>
             <button className="w-full px-3 py-2 text-sm text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 rounded-md transition-colors">
-              Try It Now
+              Browse Components
             </button>
           </Card>
 
@@ -73,13 +66,12 @@ export default function HomePage() {
           <Heading level={2} className="mb-4 text-center">Quick Start</Heading>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Heading level={3} className="mb-3">Customize Your Theme</Heading>
-              <ol className="space-y-2 text-sm list-decimal list-inside text-gray-700">
-                <li>Click "Theme Editor" in the top navigation</li>
-                <li>Use the color pickers to change colors</li>
-                <li>Adjust typography and spacing sliders</li>
-                <li>Save your theme for future use</li>
-              </ol>
+              <Heading level={3} className="mb-3">Customize Design Tokens</Heading>
+                <ol className="space-y-2 text-sm list-decimal list-inside text-gray-700">
+                  <li>Edit the canonical tokens in <code>webapp/theme/tokens.css</code> or use Tailwind config</li>
+                  <li>Rebuild the frontend to apply token changes</li>
+                  <li>Components will pick up token updates automatically</li>
+                </ol>
             </div>
             <div>
               <Heading level={3} className="mb-3">Use Components</Heading>

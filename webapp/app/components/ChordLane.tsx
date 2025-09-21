@@ -73,7 +73,7 @@ export function ChordLane({
     }, [chords, zoom, height, bars, beatsPerBar, totalBeats]);
     return (
       <div
-        className="relative min-h-[48px] bg-slate-900 rounded border border-slate-700 overflow-visible"
+        className="relative h-12 bg-slate-900 rounded border border-slate-700 overflow-visible"
         ref={containerRef}
       >
         {chords?.map((c, i) => (
@@ -161,7 +161,7 @@ export function ChordLane({
   return (
     <div
       ref={wrapperRef}
-      className="relative h-[32px] bg-stone-900/60 border border-stone-600/40 overflow-hidden vintage-timeline-element timeline-wrapper ring-1 ring-green-500/30"
+      className="relative h-12 bg-stone-900/60 border border-stone-600/40 overflow-hidden vintage-timeline-element timeline-wrapper ring-1 ring-green-500/30"
     >
       {chords?.map((c, i) => {
         const beat = c.startBeat;

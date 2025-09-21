@@ -83,7 +83,7 @@ export function SectionRail({
   }, [sections, zoom, laneOffset, depthBlur]);
 
   return (
-    <div ref={wrapperRef} className="relative h-9 vintage-timeline-element timeline-wrapper ring-1 ring-red-500/40">
+    <div ref={wrapperRef} className="relative h-12 vintage-timeline-element timeline-wrapper ring-1 ring-red-500/40">
       {sections?.map((s, i) => {
         // Muted vintage section colors
         const vintageColors = {

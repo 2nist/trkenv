@@ -1,0 +1,32 @@
+/* Theme: Funky */
+
+/* Palette: dark olive green, saffron, turquoise */
+.theme-funky {
+  --bg: #0f1410;
+  --fg: #f7f7f2;
+  --muted: #1a2418;
+  --brand-600: #3D5A2A;
+  --accent-saffron: #F4C430;
+  --accent-turquoise: #2FC6C4;
+
+  --radius-md: 1rem;
+  --shadow-card: 0 8px 24px rgba(0,0,0,.35), 0 2px 4px rgba(0,0,0,.25);
+}
+
+.theme-funky body { background: var(--bg); color: var(--fg); }
+.theme-funky .app-header, .theme-funky .app-sidebar { background: #111711; }
+
+/* Funky button: saffron with turquoise focus ring */
+.btn-funky {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  height: 2.5rem;
+  padding-inline: 1rem;
+  background-color: var(--accent-saffron);
+  color: #202010;
+  box-shadow: 0 8px 0 #2a2a18, 0 12px 24px rgba(0,0,0,.35);
+}
+.btn-funky:active { transform: translateY(2px); box-shadow: 0 2px 0 #2a2a18, 0 6px 12px rgba(0,0,0,.35); }
+.btn-funky:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-turquoise), inset 0 -2px 0 rgba(0,0,0,.2); }

@@ -64,7 +64,7 @@ export function LyricsLane() {
   };
 
   return (
-    <div ref={containerRef} className="relative bg-slate-900/80 border border-border rounded overflow-hidden">
+    <div ref={containerRef} className="relative h-12 bg-slate-900/80 border border-border rounded overflow-hidden">
       {rows.map((r) => (
         <div key={r.row} ref={(el) => { rowRefs.current[r.row] = el; }} className="absolute left-0 right-0 var-top">
           {r.items.map((l) => {

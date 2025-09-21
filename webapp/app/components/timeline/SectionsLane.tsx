@@ -136,7 +136,7 @@ export function SectionsLane() {
   return (
     <div
       ref={containerRef}
-      className="relative h-8 bg-slate-800/80 border border-border rounded"
+      className="relative h-12 bg-slate-800/80 border border-border rounded"
     >
       {sections.map((s: any, idx: number) => {
         const secId = s.id || `sec${idx}`;

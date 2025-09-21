@@ -255,4 +255,18 @@
 }
 
 @layer components {}
-@layer overrides {}
+@layer overrides {
+  /* Force header and footer text to be black for visibility */
+  header, footer, header *, footer * {
+    color: #000000 !important;
+  }
+  
+  /* Ensure header backgrounds are visible */
+  header {
+    background-color: #ffffff !important;
+  }
+  
+  footer {
+    background-color: #ffffff !important;
+  }
+}

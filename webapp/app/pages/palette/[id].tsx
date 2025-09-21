@@ -1,6 +1,7 @@
 /* eslint-disable */
 "use client";
 import React from 'react';
+import type { GetServerSideProps, NextPage } from 'next';
 import useSWR from 'swr';
 import { Rnd } from 'react-rnd';
 
@@ -60,37 +61,41 @@ function resolve(feature: string, component: string, variant?: string) {
   return null;
 }
 
-export default function PaletteEditorPage({ params }: { params: { id: string } }) {
-  const { data, mutate } = useSWR<CanvasDoc>(`${API}/api/palettes/${params.id}`, fetcher);
+type PageProps = { id: string | null };
+
+const PaletteEditorPage: NextPage<PageProps> = ({ id }) => {
+  const { data, mutate } = useSWR<CanvasDoc>(id ? `${API}/api/palettes/${id}` : null, fetcher);
   const [etag, setEtag] = React.useState<string | null>(null);
   const [snaps, setSnaps] = React.useState<Array<{ ts: string; path: string }>>([]);
 
   React.useEffect(() => {
+    if (!id) return;
     // Re-fetch to capture headers for ETag
-    fetch(`${API}/api/palettes/${params.id}`).then(async (r) => {
+    fetch(`${API}/api/palettes/${id}`).then(async (r) => {
       setEtag(r.headers.get('ETag'));
       const j = await r.json();
       mutate(j, { revalidate: false });
     });
     // Load snapshots list
-    fetch(`${API}/api/palettes/${params.id}/snapshots`).then((r) => r.json()).then((j) => setSnaps(j.items || []));
-  }, [params.id]);
+    fetch(`${API}/api/palettes/${id}/snapshots`).then((r) => r.json()).then((j) => setSnaps(j.items || []));
+  }, [id]);
 
-  const debouncedRef = React.useRef<any>();
+  const debouncedRef = React.useRef<any>(null);
   const debounced = (fn: () => void, ms = 200) => {
     if (debouncedRef.current) clearTimeout(debouncedRef.current);
     debouncedRef.current = setTimeout(fn, ms);
   };
 
   const patchNode = async (nodeId: string, patch: Partial<NodeModel>) => {
-    const r = await fetch(`${API}/api/palettes/${params.id}/nodes/${nodeId}`, {
+    if (!id) return;
+    const r = await fetch(`${API}/api/palettes/${id}/nodes/${nodeId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...(etag ? { 'If-Match': etag } : {}) },
       body: JSON.stringify(patch),
     });
     if (r.status === 409) {
       // stale: refetch full doc
-      const gr = await fetch(`${API}/api/palettes/${params.id}`);
+      const gr = await fetch(`${API}/api/palettes/${id}`);
       setEtag(gr.headers.get('ETag'));
       const j = await gr.json();
       mutate(j, { revalidate: false });
@@ -107,13 +112,15 @@ export default function PaletteEditorPage({ params }: { params: { id: string } }
   };
 
   const createSnapshot = async () => {
-    await fetch(`${API}/api/palettes/${params.id}/snapshot`, { method: 'POST' });
-    const list = await fetch(`${API}/api/palettes/${params.id}/snapshots`).then((r) => r.json());
+    if (!id) return;
+    await fetch(`${API}/api/palettes/${id}/snapshot`, { method: 'POST' });
+    const list = await fetch(`${API}/api/palettes/${id}/snapshots`).then((r) => r.json());
     setSnaps(list.items || []);
   };
 
   const addNode = async (node: Partial<NodeModel>) => {
-    const r = await fetch(`${API}/api/palettes/${params.id}/nodes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(node) });
+    if (!id) return;
+    const r = await fetch(`${API}/api/palettes/${id}/nodes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(node) });
     const newEtag = r.headers.get('ETag');
     if (newEtag) setEtag(newEtag);
     const created = await r.json();
@@ -124,13 +131,15 @@ export default function PaletteEditorPage({ params }: { params: { id: string } }
   };
 
   const restoreSnapshot = async (ts: string) => {
-    const r = await fetch(`${API}/api/palettes/${params.id}/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ts }) });
+    if (!id) return;
+    const r = await fetch(`${API}/api/palettes/${id}/restore`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ts }) });
     const newEtag = r.headers.get('ETag');
     if (newEtag) setEtag(newEtag);
     const j = await r.json();
     mutate(j.doc, { revalidate: false });
   };
 
+  if (!id) return <div className="p-4">Missing palette id</div>;
   if (!data) return <div className="p-4">Loading…</div>;
 
   return (
@@ -195,4 +204,12 @@ export default function PaletteEditorPage({ params }: { params: { id: string } }
       </div>
     </div>
   );
-}
+};
+
+export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx) => {
+  const pid = ctx.params?.id;
+  const id = Array.isArray(pid) ? pid[0] : pid ?? null;
+  return { props: { id } };
+};
+
+export default PaletteEditorPage;

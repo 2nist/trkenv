@@ -55,7 +55,7 @@ export function ChordsLane() {
   return (
     <div
       ref={(el) => { containerRef.current = el; wrapperRef.current = el; }}
-      className="relative min-h-[44px] bg-slate-900 rounded border border-slate-700 overflow-hidden timeline-wrapper"
+      className="relative h-12 bg-slate-900 rounded border border-slate-700 overflow-hidden timeline-wrapper"
     >
       {chords.map((c, i) => {
         const id = (c as any).id || `c${i}`;

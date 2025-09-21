@@ -1,0 +1,15 @@
+/* Theme: Playground */
+
+.theme-play {
+  --bg: oklch(0.99 0.02 110);
+  --fg: oklch(0.20 0.04 260);
+  --muted: oklch(0.96 0.02 110);
+  --brand-600: oklch(0.70 0.20 35);
+  --radius-md: 0.75rem;
+  --shadow-card: 0 6px 20px rgb(0 0 0 / 0.10);
+}
+
+.theme-play body {
+  background: radial-gradient(1200px 600px at 20% -10%, #fff 0%, #f7f7ff 50%, #fbfbfb 100%);
+  color: var(--fg);
+}

@@ -1,0 +1,12 @@
+{
+  "beats": [
+    {
+      "t": 0.0,
+      "bar": 0,
+      "beat": 0
+    }
+  ],
+  "beats_per_bar": 4,
+  "tempo_bpm": 120.0,
+  "time_signature": "4/4"
+}

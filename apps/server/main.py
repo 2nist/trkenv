@@ -18,6 +18,10 @@ from services.sdk_py.base import RunContext
 from fastapi.staticfiles import StaticFiles
 from services.lyrics_source import resolve_lyrics
 from apps.server.models.palette import CanvasDoc, XY, Size, Node, Group  # type: ignore
+try:
+    from services.song_index import song_index as build_song_indices  # type: ignore
+except Exception:
+    build_song_indices = None  # type: ignore
 
 # Helper: import an optional router module and return its `router` attr if present.
 def _optional_import_router(module_path: str, attr: str = 'router'):
@@ -39,6 +43,11 @@ WEB  = ROOT / "webapp" / "host"
 THEME_DIR = ROOT / "webapp" / "theme"
 THEMES = THEME_DIR / "themes"
 PALETTES_DIR = ROOT / "data" / "palettes"
+DRAFTS_DIR = ROOT / "datasets" / "drafts"
+DRAFTS_DIR.mkdir(parents=True, exist_ok=True)
+AA_DIR = ROOT / "experiments" / "audio-engine" / "audio-automation"
+ART_DIR = ROOT / "artifacts"
+SONG_ART_DIR = ART_DIR / "songs"
 
 app = FastAPI(title="TRK Host")
 
@@ -46,8 +55,9 @@ app = FastAPI(title="TRK Host")
 # In production this should be tightened or driven by configuration.
 app.add_middleware(
     CORSMiddleware,
-    # Allow local frontend dev servers (3000 and 3001) and loopback variants.
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001"],
+    # Allow any localhost/127.0.0.1 origin in dev, regardless of port.
+    # Note: allow_origin_regex matches full scheme+host+port. This is safer than "*" for cookies/auth.
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -75,6 +85,8 @@ def _include_optional_routers(app: FastAPI, modules: list[str]):
 # Include known optional routers under apps.server.routes (idempotent)
 _include_optional_routers(app, [
     "apps.server.routes.registry",
+    "apps.server.routes.songs_indices",
+    "apps.server.routes.timeline",
     "apps.server.routes.sessions",
     "apps.server.routes.flows",
 ])
@@ -178,6 +190,26 @@ def start_job(exp_id: str, body: Dict[str, Any]):
     th = threading.Thread(target=_run_job, args=(job,), daemon=True)
     th.start()
     return {"jobId": job_id, "status": job.status}
+
+# Convenience: start a custom background job with a callable instead of experiment
+def start_custom_job(name: str, fn, inputs: Dict[str, Any]) -> str:
+    job_id = uuid.uuid4().hex[:12]
+    job = Job(job_id, name, inputs or {})
+    JOBS[job_id] = job
+    def _wrap():
+        try:
+            job.status = "running"
+            fn(job)
+            if job.status not in ("failed", "cancelled"):
+                job.status = "completed"
+        except Exception as e:
+            job.status = "failed"
+            job.log(f"ERROR: {e}")
+        finally:
+            job._done.set()
+    th = threading.Thread(target=_wrap, daemon=True)
+    th.start()
+    return job_id
 @app.get("/api/jobs/{job_id}/status")
 def job_status(job_id: str):
     j = JOBS.get(job_id)
@@ -189,6 +221,20 @@ def job_status(job_id: str):
         "error"
     )
     return {"jobId": j.id, "status": j.status, "state": state}
+
+# Frontend-simple jobs status (alias) used by /pages/record.tsx
+@app.get("/jobs/{job_id}")
+def job_status_simple(job_id: str):
+    j = JOBS.get(job_id)
+    if not j:
+        raise HTTPException(404, "job not found")
+    # surface optional fields from inputs or side-effects
+    payload: Dict[str, Any] = {"jobId": j.id, "status": "running" if j.status=="running" else ("done" if j.status in ("completed","cancelled") else ("error" if j.status=="failed" else j.status))}
+    # Common fields we might set from job logic
+    for k in ("draftId", "songId", "error"):
+        if k in j.inputs:
+            payload[k] = j.inputs[k]
+    return payload
 
 @app.get("/api/jobs/{job_id}/logs/stream")
 def stream_logs(job_id: str):
@@ -321,6 +367,147 @@ def init_db():
 
 
 init_db()
+def _write_jcrd_and_indices(song_id: str, data: Dict[str, Any] | None):
+    try:
+        if not data:
+            return
+        ART_DIR.mkdir(parents=True, exist_ok=True)
+        base = SONG_ART_DIR / song_id
+        base.mkdir(parents=True, exist_ok=True)
+        jcrd_fp = base / "jcrd.json"
+        # Normalize into a minimal jcrd-like structure
+        payload = data if isinstance(data, dict) else {"raw": data}
+        # Ensure metadata keys are at predictable places
+        if "metadata" not in payload:
+            meta = {}
+            title = data.get("title") if isinstance(data, dict) else None  # type: ignore[attr-defined]
+            artist = data.get("artist") if isinstance(data, dict) else None  # type: ignore[attr-defined]
+            if title or artist:
+                meta = {"title": title, "artist": artist}
+            payload = {**payload, "metadata": {**meta}}
+        jcrd_fp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        # Compute indices if available
+        if build_song_indices:
+            try:
+                build_song_indices(song_id)  # writes beatgrid/sections/chords under artifacts
+            except Exception as e:
+                print("song indices build failed", song_id, e)
+    except Exception as e:
+        print("write jcrd/indices failed", song_id, e)
+
+def _db_get_song_source(song_id: str) -> Dict[str, Any]:
+    conn = get_db_conn(); cur = conn.cursor()
+    cur.execute('SELECT source_json FROM songs WHERE id = ?', (song_id,))
+    r = cur.fetchone(); conn.close()
+    return json.loads(r[0]) if (r and r[0]) else {}
+
+def _indices_dir(song_id: str) -> Path:
+    base = SONG_ART_DIR / song_id
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
+def _load_indices(song_id: str) -> Dict[str, Any]:
+    """Load indices from artifacts; if missing and builder available, build them."""
+    base = _indices_dir(song_id)
+    bg = base / 'beatgrid.json'; sec = base / 'sections.json'; ch = base / 'chords.json'
+    if not (bg.exists() and sec.exists() and ch.exists()) and build_song_indices:
+        try:
+            build_song_indices(song_id)
+        except Exception as e:
+            print('indices build error', song_id, e)
+    out: Dict[str, Any] = {}
+    try:
+        if bg.exists(): out['beatgrid'] = json.loads(bg.read_text(encoding='utf-8'))
+        if sec.exists(): out['sections'] = json.loads(sec.read_text(encoding='utf-8'))
+        if ch.exists(): out['chords'] = json.loads(ch.read_text(encoding='utf-8'))
+    except Exception as e:
+        print('indices read error', song_id, e)
+    return out
+
+@app.get('/api/songs/{song_id}/indices')
+def api_song_indices(song_id: str):
+    out = _load_indices(song_id)
+    # Fallback: derive sections/chords from source if indices absent
+    if not out.get('sections') or not out.get('chords'):
+        src = _db_get_song_source(song_id)
+        # sections
+        if not out.get('sections'):
+            sections = []
+            for s in (src.get('sections') or []):
+                try:
+                    sections.append({
+                        'sections': [], # placeholder to ensure schema
+                    })
+                except Exception:
+                    pass
+            # Better: map directly
+            sections = []
+            for s in (src.get('sections') or []):
+                try:
+                    start = float(s.get('start_s') or s.get('start') or 0)
+                    end = float(s.get('end_s') or s.get('end') or start)
+                    name = s.get('name') or s.get('label') or 'Section'
+                    sections.append({'name': name, 'start_s': start, 'end_s': end})
+                except Exception:
+                    pass
+            if sections:
+                out['sections'] = { 'sections': sections }
+        # chords
+        if not out.get('chords'):
+            chords = []
+            cp = src.get('chord_progression') or []
+            for c in cp:
+                try:
+                    if isinstance(c, dict):
+                        t = float(c.get('time') or 0.0); sym = str(c.get('chord') or '')
+                    elif isinstance(c, (list, tuple)):
+                        t = float(c[0]) if len(c) > 0 else 0.0; sym = str(c[1]) if len(c) > 1 else ''
+                    else:
+                        continue
+                    chords.append({'t': t, 'symbol': sym})
+                except Exception:
+                    pass
+            if chords:
+                out['chords'] = { 'chords': chords }
+    return out
+
+@app.post('/api/songs/{song_id}/indices')
+def api_song_reindex(song_id: str):
+    if not build_song_indices:
+        raise HTTPException(500, 'indices builder not available')
+    try:
+        build_song_indices(song_id)
+        return { 'ok': True }
+    except Exception as e:
+        raise HTTPException(500, f'indices build failed: {e}')
+
+@app.get('/api/songs/{song_id}/context')
+def api_song_context(song_id: str):
+    # Prefer jcrd in artifacts; else source_json
+    base = _indices_dir(song_id)
+    jcrd = base / 'jcrd.json'
+    src = None
+    try:
+        if jcrd.exists():
+            src = json.loads(jcrd.read_text(encoding='utf-8'))
+        else:
+            src = _db_get_song_source(song_id)
+    except Exception:
+        src = _db_get_song_source(song_id)
+    meta = (src or {}).get('metadata') or {}
+    tempo = float(meta.get('tempo') or 120)
+    ts = meta.get('time_signature') or '4/4'
+    duration = float(meta.get('duration') or 0)
+    # If duration missing, try beatgrid length
+    try:
+        idx = _load_indices(song_id)
+        if (not duration) and idx.get('beatgrid') and idx['beatgrid'].get('beats'):
+            beats = idx['beatgrid']['beats']
+            if beats:
+                duration = float(beats[-1].get('t') or 0)
+    except Exception:
+        pass
+    return { 'tempo_bpm': tempo, 'time_signature': ts, 'duration_s': duration }
 
 
 # Lyrics cache static mount
@@ -352,7 +539,64 @@ def create_song(body: Dict[str, Any]):
     cur.execute("INSERT INTO songs (id, title, source_json, lyrics) VALUES (?, ?, ?, ?)", (sid, title, json.dumps(body), lyrics))
     conn.commit()
     conn.close()
+    # Persist jcrd + indices for timeline if JSON resembles songdoc
+    try:
+        _write_jcrd_and_indices(sid, body)
+    except Exception:
+        pass
     return {"id": sid, "status": "created"}
+
+# Import endpoint for binary files (.json/.jcrd/.mid/.mp3/.wav)
+@app.post("/songs/import")
+async def songs_import(file: UploadFile = File(...)):
+    name = Path(file.filename).name
+    ext = Path(name).suffix.lower()
+    # Save under datasets/library/assets
+    assets_dir = LIB_DIR / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    raw = await file.read()
+    dest = assets_dir / name
+    dest.write_bytes(raw)
+
+    # If JSON-like, try parse and create richer song source
+    sid = uuid.uuid4().hex[:12]
+    title = Path(name).stem
+    artist = "Unknown"
+    source: Dict[str, Any] = {"assets": {}}
+    try:
+        if ext in (".json", ".jcrd") or name.endswith(".jcrd.json"):
+            txt = raw.decode("utf-8", errors="ignore")
+            data = json.loads(txt)
+            title = data.get("metadata", {}).get("title") or data.get("title") or title
+            artist = data.get("metadata", {}).get("artist") or data.get("artist") or artist
+            source = data if isinstance(data, dict) else {"raw": data}
+        elif ext in (".mid", ".midi"):
+            source = {"metadata": {"title": title, "artist": artist}, "assets": {"midi": str(dest)}}
+        elif ext in (".mp3", ".wav", ".ogg", ".webm"):
+            source = {"metadata": {"title": title, "artist": artist}, "assets": {"audio": str(dest)}}
+        else:
+            source = {"metadata": {"title": title, "artist": artist}, "assets": {"file": str(dest)}}
+    except Exception:
+        source = {"metadata": {"title": title, "artist": artist}, "assets": {"file": str(dest)}}
+
+    conn = get_db_conn(); cur = conn.cursor()
+    cur.execute("INSERT INTO songs (id, title, source_json, lyrics) VALUES (?, ?, ?, ?)", (sid, title, json.dumps(source), ""))
+    conn.commit(); conn.close()
+    # If JSON/jcrd was provided, persist it to artifacts and compute indices
+    try:
+        if ext in (".json", ".jcrd") or name.endswith(".jcrd.json"):
+            _write_jcrd_and_indices(sid, source if isinstance(source, dict) else None)
+        else:
+            # Write a minimal placeholder so beatgrid can be derived later
+            _write_jcrd_and_indices(sid, {"metadata": {"title": title, "artist": artist}})
+    except Exception:
+        pass
+    return {"id": sid, "title": title, "created": True}
+
+# Alias under /api to avoid any conflicts with dynamic routes
+@app.post("/api/songs/import")
+async def songs_import_api(file: UploadFile = File(...)):
+    return await songs_import(file)
 
 
 @app.get("/songs/{song_id}")
@@ -367,6 +611,245 @@ def get_song(song_id: str):
     row = dict(r)
     row["source"] = json.loads(row.pop("source_json")) if row.get("source_json") else {}
     return row
+
+# ---------------------- Recording upload → Draft pipeline ----------------------
+
+def _write_draft(draft_id: str, meta: Dict[str, Any]) -> Path:
+    """Persist a draft 'songdoc' JSON for review page."""
+    DRAFTS_DIR.mkdir(parents=True, exist_ok=True)
+    doc = {
+        "id": draft_id,
+        "meta": {
+            "title": meta.get("title") or f"Recording {draft_id}",
+            "artist": meta.get("artist") or "Unknown",
+            "timeSig": meta.get("timeSig") or "4/4",
+            "bpm": meta.get("bpm") or {"value": 120},
+        },
+        "sections": [],
+        "lyrics": [],
+        "assets": meta.get("assets") or {},
+    }
+    fp = DRAFTS_DIR / f"{draft_id}.json"
+    fp.write_text(json.dumps(doc, indent=2), encoding="utf-8")
+    return fp
+
+@app.post("/recordings/upload")
+async def recordings_upload(file: UploadFile = File(...)):
+    # Save uploaded recording
+    rec_dir = RUNS / "_recordings"
+    rec_dir.mkdir(parents=True, exist_ok=True)
+    base = Path(file.filename).name or "recording.webm"
+    rec_id = uuid.uuid4().hex[:8]
+    dest = rec_dir / f"{rec_id}_{base}"
+    data = await file.read()
+    dest.write_bytes(data)
+
+    # Start background job to process recording: analyze with audio-engine, then create draft
+    def _task(job: Job):
+        job.log(f"processing recording: {dest}")
+        
+        # First, run audio-engine analysis on the recording
+        try:
+            job.log("running audio analysis...")
+            # Create and start audio-engine job directly (can't call route handler as function)
+            analysis_job_id = uuid.uuid4().hex[:12]
+            analysis_job = Job(analysis_job_id, "audio-engine", {"audio": str(dest)})
+            JOBS[analysis_job_id] = analysis_job
+            analysis_thread = threading.Thread(target=_run_job, args=(analysis_job,), daemon=True)
+            analysis_thread.start()
+            
+            # Wait for analysis to complete
+            import time
+            max_wait = 300  # 5 minutes timeout
+            waited = 0
+            while waited < max_wait:
+                if analysis_job.status in ("completed", "failed"):
+                    break
+                time.sleep(2)
+                waited += 2
+            
+            analysis_job = JOBS.get(analysis_job_id)
+            if analysis_job and analysis_job.status == "completed":
+                job.log("audio analysis completed")
+                # Extract results from analysis job
+                analysis_dir = analysis_job.dir
+                segments_file = analysis_dir / "segments.json"
+                lyrics_file = analysis_dir / "words.json"
+                
+                segments = []
+                lyrics = []
+                metadata = {"title": f"Recording {rec_id}", "artist": "Unknown"}
+                
+                if segments_file.exists():
+                    try:
+                        segments_data = json.loads(segments_file.read_text(encoding="utf-8"))
+                        segments = segments_data.get("segments", [])
+                        job.log(f"found {len(segments)} segments")
+                    except Exception as e:
+                        job.log(f"failed to parse segments: {e}")
+                
+                if lyrics_file.exists():
+                    try:
+                        lyrics_data = json.loads(lyrics_file.read_text(encoding="utf-8"))
+                        lyrics = lyrics_data.get("words", [])
+                        job.log(f"found {len(lyrics)} lyrics")
+                    except Exception as e:
+                        job.log(f"failed to parse lyrics: {e}")
+                
+                # Create draft with extracted data
+                meta = {
+                    "title": f"Recording {rec_id}",
+                    "artist": "Unknown",
+                    "assets": {"audio": str(dest)},
+                }
+                draft = {
+                    "id": uuid.uuid4().hex[:12],
+                    "meta": meta,
+                    "sections": segments,
+                    "lyrics": lyrics,
+                    "assets": {"audio": str(dest)},
+                }
+                draft_id = draft["id"]
+                _write_draft(draft_id, draft)
+                job.inputs["draftId"] = draft_id
+                job.log(f"draft ready with analysis: {draft_id}")
+            else:
+                job.log("audio analysis failed or timed out, creating basic draft")
+                # Fallback: create basic draft without analysis
+                meta = {
+                    "title": f"Recording {rec_id}",
+                    "artist": "Unknown",
+                    "assets": {"audio": str(dest)},
+                }
+                draft_id = uuid.uuid4().hex[:12]
+                _write_draft(draft_id, meta)
+                job.inputs["draftId"] = draft_id
+                job.log(f"basic draft ready: {draft_id}")
+                
+        except Exception as e:
+            job.log(f"analysis failed: {e}, creating basic draft")
+            # Fallback: create basic draft
+            meta = {
+                "title": f"Recording {rec_id}",
+                "artist": "Unknown",
+                "assets": {"audio": str(dest)},
+            }
+            draft_id = uuid.uuid4().hex[:12]
+            _write_draft(draft_id, meta)
+            job.inputs["draftId"] = draft_id
+            job.log(f"basic draft ready: {draft_id}")
+
+    job_id = start_custom_job("recording-upload", _task, {"path": str(dest)})
+    return {"jobId": job_id}
+
+@app.get("/drafts/{draft_id}/songdoc")
+def drafts_songdoc(draft_id: str):
+    fp = DRAFTS_DIR / f"{draft_id}.json"
+    if not fp.exists():
+        raise HTTPException(404, "draft not found")
+    return json.loads(fp.read_text(encoding="utf-8"))
+
+@app.post("/songs/from-draft")
+def songs_from_draft(body: Dict[str, Any]):
+    draft_id = body.get("draftId")
+    if not draft_id:
+        raise HTTPException(400, "draftId required")
+    fp = DRAFTS_DIR / f"{draft_id}.json"
+    if not fp.exists():
+        raise HTTPException(404, "draft not found")
+    draft = json.loads(fp.read_text(encoding="utf-8"))
+    title = draft.get("meta", {}).get("title") or f"Song {draft_id}"
+    artist = draft.get("meta", {}).get("artist") or "Unknown"
+    # Build a simple source from draft
+    source = {
+        "metadata": {"title": title, "artist": artist},
+        "assets": draft.get("assets") or {},
+        "sections": draft.get("sections") or [],
+        "lyrics": draft.get("lyrics") or [],
+    }
+    sid = uuid.uuid4().hex[:12]
+    conn = get_db_conn(); cur = conn.cursor()
+    cur.execute("INSERT INTO songs (id, title, source_json, lyrics) VALUES (?, ?, ?, ?)", (sid, title, json.dumps(source), json.dumps(source.get("lyrics") or [])))
+    conn.commit(); conn.close()
+    # Persist draft as jcrd and compute indices
+    try:
+        _write_jcrd_and_indices(sid, source)
+    except Exception:
+        pass
+    return {"id": sid}
+
+# ---------------------- Stream ingestion using audio-automation ----------------------
+
+@app.post('/api/stream/ingest')
+def api_stream_ingest(body: Dict[str, Any]):
+    """Ingest a list of streaming URLs (YouTube, etc.), record to a mix file via
+    audio-automation's record_stream, and create a song. Returns a jobId.
+
+    Body fields:
+      - urls: list of URLs or local file paths (required unless playlist provided)
+      - playlist: optional playlist text (one URL/path per line)
+      - mode: 'yt-dlp' | 'streamlink' (default 'yt-dlp')
+      - audio_format: wav|mp3|ogg|webm (default 'wav')
+      - sample_rate: default 44100
+      - channels: default 2
+      - title: optional song title
+      - artist: optional artist
+    """
+    urls = body.get('urls') or []
+    playlist_text = body.get('playlist')
+    mode = body.get('mode') or 'yt-dlp'
+    audio_format = body.get('audio_format') or 'wav'
+    sample_rate = int(body.get('sample_rate') or 44100)
+    channels = int(body.get('channels') or 2)
+    title = (body.get('title') or '').strip()
+    artist = (body.get('artist') or '').strip() or 'Unknown'
+
+    if not playlist_text and (not isinstance(urls, list) or not urls):
+        raise HTTPException(400, 'urls (list) or playlist (text) required')
+
+    # Prepare session directory and playlist
+    AA_DIR.mkdir(parents=True, exist_ok=True)
+    work_dir = AA_DIR / 'work'
+    work_dir.mkdir(parents=True, exist_ok=True)
+    sess_dir = work_dir / (time.strftime('session-%Y%m%d-%H%M%S'))
+    sess_dir.mkdir(parents=True, exist_ok=True)
+    playlist_file = sess_dir / 'playlist.txt'
+    if playlist_text:
+        playlist_file.write_text(playlist_text, encoding='utf-8')
+    else:
+        playlist_file.write_text('\n'.join(urls) + '\n', encoding='utf-8')
+
+    # Ensure audio-automation src on sys.path and import record_stream
+    aa_src = AA_DIR
+    if str(aa_src) not in sys.path:
+        sys.path.insert(0, str(aa_src))
+    try:
+        import importlib
+        rs = importlib.import_module('src.record_stream')
+    except Exception as e:
+        raise HTTPException(500, f'failed to load audio-automation: {e}')
+
+    def _task(job: Job):
+        try:
+            job.log(f'recording from playlist: {playlist_file}')
+            mix_path = rs.run(playlist_file=playlist_file, session_dir=sess_dir, mode=mode,
+                              audio_format=audio_format, sample_rate=sample_rate, channels=channels,
+                              logger=lambda m: job.log(str(m)))
+            # Create song row
+            song_title = title or f'Stream {mix_path.stem}'
+            source = {"metadata": {"title": song_title, "artist": artist}, "assets": {"audio": str(mix_path)}}
+            sid = uuid.uuid4().hex[:12]
+            conn = get_db_conn(); cur = conn.cursor()
+            cur.execute('INSERT INTO songs (id, title, source_json, lyrics) VALUES (?, ?, ?, ?)', (sid, song_title, json.dumps(source), ''))
+            conn.commit(); conn.close()
+            job.inputs['songId'] = sid
+            job.log(f'created song: {sid}')
+        except Exception as e:
+            job.status = 'failed'
+            job.log(f'ERROR: {e}')
+
+    job_id = start_custom_job('stream-ingest', _task, {"session": str(sess_dir)})
+    return {"jobId": job_id}
 
 
 # ---------------------- Compatibility V1 API for frontend ----------------------
@@ -617,6 +1100,88 @@ def seconds_to_stamp(s: float):
     ss = int(s%60)
     ms = int((s - int(s)) * 1000)
     return f"{hh:02d}:{mm:02d}:{ss:02d}.{ms:03d}"
+
+def _stamp_to_seconds(stamp: str) -> float:
+    """Parse a VTT/WebVTT timestamp like HH:MM:SS.mmm into seconds."""
+    try:
+        parts = stamp.split(':')
+        if len(parts) == 3:
+            hh = int(parts[0]); mm = int(parts[1]); ss_ms = parts[2]
+        elif len(parts) == 2:  # MM:SS.mmm
+            hh = 0; mm = int(parts[0]); ss_ms = parts[1]
+        else:
+            return 0.0
+        if '.' in ss_ms:
+            ss, ms = ss_ms.split('.')
+            sec = int(ss); msec = int(ms[:3].ljust(3,'0'))
+        else:
+            sec = int(ss_ms); msec = 0
+        return hh*3600 + mm*60 + sec + msec/1000.0
+    except Exception:
+        return 0.0
+
+@app.get('/api/lyrics/lines')
+def api_lyrics_lines(songId: str):
+    """Return parsed lyric lines from the song's attached VTT, if any.
+
+    Response: { lines: [{ t: seconds, text: str }], count: int }
+    """
+    conn = get_db_conn(); cur = conn.cursor()
+    cur.execute('SELECT source_json FROM songs WHERE id = ?', (songId,))
+    r = cur.fetchone(); conn.close()
+    if not r:
+        raise HTTPException(404, 'song not found')
+    source = json.loads(r[0]) if r[0] else {}
+    assets = (source or {}).get('assets') or {}
+    vtt_path = assets.get('lyrics_vtt')
+    if not vtt_path:
+        # Try list variant
+        paths = assets.get('lyrics_vtts') or []
+        if isinstance(paths, list) and paths:
+            vtt_path = paths[0]
+    if not vtt_path:
+        return { 'lines': [], 'count': 0 }
+    vp = Path(vtt_path)
+    if not vp.exists():
+        # Attempt to resolve relative to lyrics cache if stored as basename
+        cand = list(LYRICS_CACHE.rglob(vp.name))
+        if cand:
+            vp = cand[0]
+        else:
+            return { 'lines': [], 'count': 0 }
+    try:
+        raw = vp.read_text(encoding='utf-8', errors='ignore').splitlines()
+    except Exception:
+        return { 'lines': [], 'count': 0 }
+
+    lines = []
+    i = 0
+    while i < len(raw):
+        line = raw[i].strip()
+        i += 1
+        if not line or line.upper().startswith('WEBVTT'):
+            continue
+        # Optional cue id line: numeric or arbitrary, followed by time line
+        if '-->' not in line and i < len(raw) and '-->' in raw[i]:
+            line = raw[i].strip(); i += 1
+        if '-->' in line:
+            try:
+                start_stamp = line.split('-->')[0].strip()
+                t = _stamp_to_seconds(start_stamp)
+                # Next non-empty line(s) are text; take first
+                text = ''
+                while i < len(raw) and raw[i].strip() == '':
+                    i += 1
+                if i < len(raw):
+                    text = raw[i].strip(); i += 1
+                if text:
+                    lines.append({ 't': round(t, 3), 'text': text })
+                # Skip until blank line separating cues
+                while i < len(raw) and raw[i].strip() != '':
+                    i += 1
+            except Exception:
+                pass
+    return { 'lines': lines, 'count': len(lines) }
 
 
 @app.post('/api/experiments/publish-lyrics')
@@ -1105,54 +1670,24 @@ def palette_restore(palette_id: str, body: Dict[str, Any]):
 
 @app.get("/theme/{path:path}")
 def theme_static(path: str):
-    base = THEME_DIR
-    fp = base / path
-    if fp.is_dir():
-        fp = fp / "index.html"
-    if not fp.exists():
-        raise HTTPException(404)
-    ct = (
-        "text/css" if fp.suffix == ".css" else
-        "application/javascript" if fp.suffix == ".js" else
-        "application/json" if fp.suffix == ".json" else
-        "application/octet-stream"
-    )
-    return Response(content=fp.read_bytes(), media_type=ct)
+    # Theme static assets are deprecated/archived. Prevent serving from this endpoint.
+    # If you need to restore theme assets, re-enable serving from THEME_DIR or restore files from webapp/theme-archive/.
+    raise HTTPException(status_code=404, detail="Theme assets removed")
 
 @app.get("/api/theme/list")
 def theme_list():
-    THEMES.mkdir(parents=True, exist_ok=True)
-    names = ["current"] + [p.stem for p in THEMES.glob("*.json")]
-    return {"themes": sorted(set(names))}
+    # Theme API deprecated — return an empty set to indicate no server-managed themes.
+    return {"themes": []}
 
 @app.get("/api/theme/{name}.json")
 def theme_get(name: str):
-    THEMES.mkdir(parents=True, exist_ok=True)
-    fp = THEMES / f"{name}.json"
-    if name == "current" and not fp.exists():
-        fp = THEMES / "midnight.json"
-    if not fp.exists():
-        raise HTTPException(404)
-    return json.loads(fp.read_text(encoding="utf-8"))
+    # Theme retrieval disabled — respond with 404 for all theme requests.
+    raise HTTPException(status_code=404, detail="Theme API disabled")
 
 @app.post("/api/theme")
 def theme_save(payload: Dict[str, Any]):
-    THEMES.mkdir(parents=True, exist_ok=True)
-    name = payload.get("name", "user-theme").strip().replace("..", "")
-    vars = payload.get("vars", {})
-    current = {}
-    cf = THEMES / "current.json"
-    if cf.exists():
-        try:
-            current = json.loads(cf.read_text(encoding="utf-8")).get("vars", {})
-        except Exception:
-            current = {}
-    current.update(vars)
-    data = {"name": name, "vars": current}
-    fp = THEMES / f"{name}.json"
-    fp.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    (THEMES / "current.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
-    return {"ok": True, "name": name}
+    # Theme saving disabled — refuse writes to theme store.
+    raise HTTPException(status_code=404, detail="Theme API disabled")
 
 if __name__ == "__main__":
     host = os.environ.get("TRK_HOST", "127.0.0.1")

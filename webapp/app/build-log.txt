@@ -1,0 +1,10 @@
+
+> dawsheet-web@0.1.0 build
+> next build
+
+  Γû▓ Next.js 14.2.32
+  - Experiments (use with caution):
+    ┬╖ outputFileTracingRoot
+
+   Skipping linting
+   Checking validity of types ...
